@@ -1,6 +1,6 @@
 ---
-name: blitzos
-description: Set up BlitzOS or a company context repository for warm Claude Code cloud sessions. Use when the user says "set up blitzos", "blitzos", or asks to onboard company context across multiple repositories in claude.ai/code.
+name: blitzos-setup
+description: Set up BlitzOS or a company context repository for warm Claude Code cloud sessions. Use when the user says "set up blitzos", "blitzos setup", or asks to onboard company context across multiple repositories in claude.ai/code.
 ---
 
 # Set up BlitzOS

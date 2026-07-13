@@ -5,7 +5,7 @@ set -euo pipefail
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 source_dir="$repo_dir/skill"
 skills_dir="$HOME/.claude/skills"
-target="$skills_dir/blitzos"
+target="$skills_dir/blitzos-setup"
 
 mkdir -p "$skills_dir"
 
