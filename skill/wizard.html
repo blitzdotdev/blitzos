@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cloud Claude setup</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #111;
+      color: #ececec;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #111; }
+    button, input, select { font: inherit; color: inherit; }
+    button, input[type="checkbox"], select { cursor: pointer; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) minmax(320px, 410px);
+      min-height: calc(100vh - 70px);
+    }
+    main, aside { padding: 24px; }
+    main { border-right: 1px solid #303030; }
+    h1, h2, p { margin-top: 0; }
+    h1 { margin-bottom: 6px; font-size: 18px; }
+    h2 { margin-bottom: 6px; font-size: 16px; }
+    .intro, .description, .repo-meta, .repo-detail, .empty, .note, .env-names {
+      color: #a8a8a8;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .intro { margin-bottom: 17px; }
+    .repo-search, .custom-connector, .slug-field input, .branch-control input, .branch-control select {
+      border: 1px solid #454545;
+      border-radius: 5px;
+      background: #0b0b0b;
+      color: #f2f2f2;
+    }
+    .repo-search { width: 100%; padding: 9px 10px; margin-bottom: 11px; }
+    .repo-list, .connector-list { border-top: 1px solid #303030; }
+    .repo-row, .connector-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 7px;
+      border-bottom: 1px solid #292929;
+    }
+    .repo-row { background: transparent; }
+    .repo-row:not(.unavailable):hover, .repo-row:not(.unavailable):focus-visible,
+    .connector-row:hover { background: #1a1a1a; }
+    .repo-row:focus-visible { outline: 2px solid #86a8ff; outline-offset: -2px; }
+    .repo-row.unavailable { opacity: .54; }
+    input[type="checkbox"] { margin: 2px 0 0; accent-color: #86a8ff; }
+    .repo-copy, .connector-copy { min-width: 0; flex: 1; }
+    .repo-name, .connector-name { display: block; font-weight: 650; overflow-wrap: anywhere; }
+    .repo-meta, .repo-detail { display: block; margin-top: 2px; }
+    .repo-detail { color: #858585; }
+    .repo-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .branch-control { display: flex; align-items: center; gap: 7px; }
+    .branch-control label { color: #aaa; font-size: 12px; }
+    .branch-control select, .branch-control input { width: min(250px, 100%); padding: 5px 7px; }
+    .branch-control input:invalid { border-color: #cf7373; }
+    details.env-names { margin-top: 7px; }
+    details.env-names summary { cursor: pointer; color: #929292; }
+    details.env-names p { margin: 5px 0 0; overflow-wrap: anywhere; }
+    .show-more {
+      margin-top: 12px;
+      padding: 7px 11px;
+      border: 1px solid #3e3e3e;
+      border-radius: 5px;
+      background: #1d1d1d;
+    }
+    aside { background: #141414; }
+    .note {
+      margin: 16px 0;
+      padding: 10px 11px;
+      border-left: 2px solid #5c78bb;
+      background: #191919;
+      color: #c8c8c8;
+    }
+    .connector-row { cursor: pointer; }
+    .connector-copy .description { display: block; margin-top: 2px; }
+    .custom-label { display: block; margin-top: 18px; font-size: 13px; font-weight: 650; }
+    .custom-connector { width: 100%; margin-top: 7px; padding: 9px 10px; cursor: text; }
+    .footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 3;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      align-items: center;
+      gap: 14px;
+      min-height: 70px;
+      padding: 12px 24px;
+      border-top: 1px solid #383838;
+      background: #151515;
+    }
+    .summary { font-size: 13px; font-weight: 650; }
+    .slug-field { display: flex; align-items: center; gap: 8px; color: #bdbdbd; font-size: 12px; }
+    .slug-field input { width: 190px; padding: 8px 9px; cursor: text; }
+    .slug-field input:invalid { border-color: #cf7373; }
+    .submit {
+      border: 0;
+      border-radius: 5px;
+      padding: 9px 16px;
+      background: #e8e8e8;
+      color: #111;
+      font-weight: 700;
+    }
+    .submit:disabled { cursor: not-allowed; opacity: .45; }
+    .error { grid-column: 1 / -1; margin: -4px 0 0; color: #ff9292; font-size: 12px; }
+    .done { display: grid; min-height: 100vh; place-items: center; padding: 30px; text-align: center; }
+    .done strong { font-size: 18px; }
+    @media (max-width: 780px) {
+      .layout { grid-template-columns: 1fr; }
+      main { border-right: 0; border-bottom: 1px solid #303030; }
+      .footer { position: static; grid-template-columns: 1fr; }
+      .error { grid-column: 1; }
+      .slug-field { justify-content: space-between; }
+      .slug-field input { width: min(230px, 60vw); }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <main>
+      <h1>1. Work repositories</h1>
+      <p class="intro">Choose the GitHub repositories Claude should see together. Local evidence is used only to make this list warmer; source code is never copied.</p>
+      <input id="repo-search" class="repo-search" type="text" placeholder="Search repositories" aria-label="Search repositories">
+      <div id="repos" class="repo-list"></div>
+      <button id="show-more" class="show-more" type="button" hidden>Show more</button>
+    </main>
+    <aside>
+      <h2>2. Claude.ai connectors</h2>
+      <p class="intro">Declare the account connectors you already use so the company context can tell Claude when to reach for them.</p>
+      <p class="note">This wizard cannot inspect your Claude.ai account. These are declarations only; no connector data or credentials are scanned.</p>
+      <div id="connectors" class="connector-list"></div>
+      <label class="custom-label" for="custom-connectors">Other connectors</label>
+      <input id="custom-connectors" class="custom-connector" type="text" maxlength="500" placeholder="Notion, Jira (comma separated)">
+      <p class="description">Names only. Do not paste tokens, passwords, or connector content.</p>
+    </aside>
+  </div>
+  <form id="footer" class="footer">
+    <div id="summary" class="summary">0 repos · 1 connector</div>
+    <label class="slug-field">Context repo <input id="slug" name="slug" type="text" value="company-context" pattern="[A-Za-z0-9._-]+" required></label>
+    <button id="submit" class="submit" type="submit" disabled>Create plan</button>
+    <p id="error" class="error" role="alert" hidden></p>
+  </form>
+
+  <script>
+    const connectorCatalog = [
+      ['Linear', 'Issues, project status, and requirements'],
+      ['Slack', 'Decisions and discussions'],
+      ['Gmail', 'Relevant email threads'],
+      ['Google Drive', 'Specs, docs, and planning material'],
+      ['GitHub', 'Pull requests, issues, and repository metadata'],
+    ];
+
+    const state = {
+      repos: [],
+      query: '',
+      showAll: false,
+      selectedRepos: new Set(),
+      branches: new Map(),
+      connectors: new Set(['GitHub']),
+      submitting: false,
+    };
+
+    const elements = {
+      repos: document.querySelector('#repos'),
+      repoSearch: document.querySelector('#repo-search'),
+      showMore: document.querySelector('#show-more'),
+      connectors: document.querySelector('#connectors'),
+      customConnectors: document.querySelector('#custom-connectors'),
+      summary: document.querySelector('#summary'),
+      slug: document.querySelector('#slug'),
+      submit: document.querySelector('#submit'),
+      footer: document.querySelector('#footer'),
+      error: document.querySelector('#error'),
+    };
+
+    function displayName(repo) {
+      return repo.name_with_owner || repo.name;
+    }
+
+    function relativeDate(value) {
+      if (!value) return 'unknown';
+      const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+      const days = Math.floor(elapsed / 86400000);
+      if (days === 0) return 'today';
+      if (days === 1) return '1 day ago';
+      if (days < 30) return `${days} days ago`;
+      const months = Math.floor(days / 30);
+      if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+      const years = Math.floor(days / 365);
+      return `${years} ${years === 1 ? 'year' : 'years'} ago`;
+    }
+
+    function branchOptions(repo) {
+      const result = [];
+      for (const branch of [repo.branch_current, repo.branch_default, ...(repo.branches_recent || [])]) {
+        if (branch && !result.includes(branch)) result.push(branch);
+      }
+      return result;
+    }
+
+    function validBranch(value) {
+      return typeof value === 'string'
+        && value.length > 0
+        && value.length <= 255
+        && /^[A-Za-z0-9._/-]+$/.test(value)
+        && !value.startsWith('-')
+        && !value.includes('..')
+        && !value.includes('//')
+        && !value.endsWith('/');
+    }
+
+    function connectable(repo) {
+      return repo.id.startsWith('github.com/') && Boolean(repo.origin);
+    }
+
+    function setRepoSelected(repo, checked) {
+      if (!connectable(repo)) return;
+      if (checked) state.selectedRepos.add(repo.id);
+      else state.selectedRepos.delete(repo.id);
+      renderRepos();
+      renderSummary();
+    }
+
+    function stopToggle(event) {
+      event.stopPropagation();
+    }
+
+    function makeBranchControl(repo) {
+      const control = document.createElement('span');
+      control.className = 'branch-control';
+      control.addEventListener('click', stopToggle);
+      control.addEventListener('keydown', stopToggle);
+      const label = document.createElement('label');
+      label.textContent = 'Branch';
+      const options = branchOptions(repo);
+      const selected = state.branches.get(repo.id) || '';
+
+      if (options.includes(selected)) {
+        const select = document.createElement('select');
+        select.setAttribute('aria-label', `Branch for ${displayName(repo)}`);
+        for (const branch of options) {
+          const option = document.createElement('option');
+          option.value = branch;
+          if (branch === repo.branch_current) option.textContent = `${branch} (current)`;
+          else if (branch === repo.branch_default) option.textContent = `${branch} (default)`;
+          else option.textContent = branch;
+          option.selected = branch === selected;
+          select.append(option);
+        }
+        const other = document.createElement('option');
+        other.value = '__other__';
+        other.textContent = 'other…';
+        select.append(other);
+        select.addEventListener('change', () => {
+          state.branches.set(repo.id, select.value === '__other__' ? '' : select.value);
+          renderRepos();
+          renderSummary();
+        });
+        control.append(label, select);
+      } else {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.required = true;
+        input.placeholder = 'branch-name';
+        input.value = selected;
+        input.setAttribute('aria-label', `Other branch for ${displayName(repo)}`);
+        const validate = () => input.setCustomValidity(validBranch(input.value)
+          ? ''
+          : 'Use a valid non-empty Git branch without spaces, .., //, or a leading -.');
+        validate();
+        input.addEventListener('input', () => {
+          state.branches.set(repo.id, input.value);
+          validate();
+          renderSummary();
+        });
+        control.append(label, input);
+      }
+      return control;
+    }
+
+    function renderRepos() {
+      elements.repos.replaceChildren();
+      const query = state.query.trim().toLowerCase();
+      const filtered = state.repos.filter((repo) => !query
+        || displayName(repo).toLowerCase().includes(query)
+        || repo.name.toLowerCase().includes(query)
+        || (repo.description || '').toLowerCase().includes(query));
+      const visible = state.showAll ? filtered : filtered.slice(0, 12);
+
+      if (visible.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = 'No matching repositories.';
+        elements.repos.append(empty);
+      }
+
+      for (const repo of visible) {
+        const available = connectable(repo);
+        const row = document.createElement('div');
+        row.className = `repo-row${available ? '' : ' unavailable'}`;
+        row.tabIndex = available ? 0 : -1;
+        row.setAttribute('role', 'checkbox');
+        row.setAttribute('aria-checked', String(state.selectedRepos.has(repo.id)));
+        row.setAttribute('aria-disabled', String(!available));
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.tabIndex = -1;
+        checkbox.checked = state.selectedRepos.has(repo.id);
+        checkbox.disabled = !available;
+        checkbox.setAttribute('aria-hidden', 'true');
+
+        const copy = document.createElement('span');
+        copy.className = 'repo-copy';
+        const name = document.createElement('span');
+        name.className = 'repo-name';
+        name.textContent = displayName(repo);
+        const meta = document.createElement('span');
+        meta.className = 'repo-meta';
+        if (!available) {
+          meta.textContent = 'local only · add a GitHub origin before using it in Claude cloud';
+        } else if (repo.source === 'local') {
+          const privacy = repo.is_private === true ? 'private' : (repo.is_private === false ? 'public' : 'privacy unknown');
+          meta.textContent = `local + GitHub · ${repo.session_count} Claude sessions · ${privacy}`;
+        } else {
+          meta.textContent = `GitHub · updated ${relativeDate(repo.updated_at)} · ${repo.is_private ? 'private' : 'public'}`;
+        }
+        const detail = document.createElement('span');
+        detail.className = 'repo-detail';
+        detail.textContent = repo.description || (repo.has_claude_md ? 'CLAUDE.md detected locally' : 'No description');
+        copy.append(name, meta, detail);
+
+        if (state.selectedRepos.has(repo.id)) {
+          const controls = document.createElement('span');
+          controls.className = 'repo-controls';
+          controls.append(makeBranchControl(repo));
+          copy.append(controls);
+          if (repo.env_var_names.length > 0) {
+            const env = document.createElement('details');
+            env.className = 'env-names';
+            const summary = document.createElement('summary');
+            summary.textContent = `${repo.env_var_names.length} environment variable names detected`;
+            const names = document.createElement('p');
+            names.textContent = `${repo.env_var_names.join(', ')}. Names only; values are never included.`;
+            env.append(summary, names);
+            env.addEventListener('click', stopToggle);
+            copy.append(env);
+          }
+        }
+
+        row.append(checkbox, copy);
+        if (available) {
+          row.addEventListener('click', () => setRepoSelected(repo, !state.selectedRepos.has(repo.id)));
+          row.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+              event.preventDefault();
+              setRepoSelected(repo, !state.selectedRepos.has(repo.id));
+            }
+          });
+        }
+        elements.repos.append(row);
+      }
+      elements.showMore.hidden = state.showAll || filtered.length <= 12;
+    }
+
+    function renderConnectors() {
+      elements.connectors.replaceChildren();
+      for (const [connector, description] of connectorCatalog) {
+        const row = document.createElement('label');
+        row.className = 'connector-row';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = state.connectors.has(connector);
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) state.connectors.add(connector);
+          else state.connectors.delete(connector);
+          renderSummary();
+        });
+        const copy = document.createElement('span');
+        copy.className = 'connector-copy';
+        const name = document.createElement('span');
+        name.className = 'connector-name';
+        name.textContent = connector;
+        const detail = document.createElement('span');
+        detail.className = 'description';
+        detail.textContent = description;
+        copy.append(name, detail);
+        row.append(checkbox, copy);
+        elements.connectors.append(row);
+      }
+    }
+
+    function customConnectors() {
+      return elements.customConnectors.value
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+    }
+
+    function allConnectors() {
+      const result = [...state.connectors];
+      const seen = new Set(result.map((name) => name.toLowerCase()));
+      for (const connector of customConnectors()) {
+        if (!seen.has(connector.toLowerCase())) {
+          seen.add(connector.toLowerCase());
+          result.push(connector);
+        }
+      }
+      return result;
+    }
+
+    function validConnector(value) {
+      return /^[A-Za-z0-9][A-Za-z0-9 ._+&()/-]{0,79}$/.test(value);
+    }
+
+    function selectedRepos() {
+      return state.repos.filter((repo) => state.selectedRepos.has(repo.id));
+    }
+
+    function renderSummary() {
+      const repos = selectedRepos();
+      const connectors = allConnectors();
+      elements.summary.textContent = `${repos.length} ${repos.length === 1 ? 'repo' : 'repos'} · ${connectors.length} ${connectors.length === 1 ? 'connector' : 'connectors'}`;
+      const branchesValid = repos.every((repo) => validBranch(state.branches.get(repo.id)));
+      const connectorsValid = connectors.length <= 25 && connectors.every(validConnector);
+      const canSubmit = repos.length > 0 && branchesValid && connectorsValid
+        && elements.slug.checkValidity() && !state.submitting;
+      elements.submit.disabled = !canSubmit;
+    }
+
+    elements.repoSearch.addEventListener('input', () => {
+      state.query = elements.repoSearch.value;
+      renderRepos();
+    });
+    elements.showMore.addEventListener('click', () => {
+      state.showAll = true;
+      renderRepos();
+    });
+    elements.customConnectors.addEventListener('input', renderSummary);
+    elements.slug.addEventListener('input', renderSummary);
+
+    elements.footer.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const repos = selectedRepos();
+      const connectors = allConnectors();
+      if (repos.length === 0 || !repos.every((repo) => validBranch(state.branches.get(repo.id)))) return;
+      if (connectors.length > 25 || !connectors.every(validConnector)) {
+        elements.error.textContent = 'Connector names must be 1–80 ordinary characters, separated by commas.';
+        elements.error.hidden = false;
+        return;
+      }
+
+      state.submitting = true;
+      elements.error.hidden = true;
+      renderSummary();
+      const payload = {
+        slug: elements.slug.value,
+        repos: repos.map((repo) => ({ id: repo.id, branch: state.branches.get(repo.id) })),
+        connectors,
+      };
+      try {
+        const response = await fetch('/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || 'Submission failed');
+        document.body.innerHTML = '<div class="done"><div><strong>Selection saved.</strong><p>Return to Claude to approve your company context.</p></div></div>';
+      } catch (error) {
+        state.submitting = false;
+        elements.error.textContent = error.message;
+        elements.error.hidden = false;
+        renderSummary();
+      }
+    });
+
+    fetch('/scan.json', { cache: 'no-store' })
+      .then((response) => {
+        if (!response.ok) throw new Error('Could not load repository scan');
+        return response.json();
+      })
+      .then((scan) => {
+        state.repos = scan.repos;
+        for (const repo of state.repos) {
+          state.branches.set(repo.id, repo.branch_current || repo.branch_default || repo.branches_recent[0] || '');
+        }
+        renderRepos();
+        renderConnectors();
+        renderSummary();
+      })
+      .catch((error) => {
+        elements.error.textContent = error.message;
+        elements.error.hidden = false;
+      });
+  </script>
+</body>
+</html>
