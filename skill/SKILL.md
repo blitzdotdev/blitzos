@@ -1,9 +1,9 @@
 ---
-name: cloud-claude
-description: Set up Cloud Claude or a company context repository for warm Claude Code cloud sessions. Use when the user says "set up cloud claude", "cloud-claude", or asks to onboard company context across multiple repositories in claude.ai/code.
+name: blitzos
+description: Set up BlitzOS or a company context repository for warm Claude Code cloud sessions. Use when the user says "set up blitzos", "blitzos", or asks to onboard company context across multiple repositories in claude.ai/code.
 ---
 
-# Set up Cloud Claude
+# Set up BlitzOS
 
 Create a thin private context repository for Claude cloud sessions. Never copy source repositories, Git history, MCP configuration, connector data, or secret values into it.
 

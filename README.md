@@ -1,69 +1,36 @@
 # BlitzOS
 
-BlitzOS is the managed runtime for Claude cloud sessions; this free, open-source skill gives you the warm-start hook so **your Claude cloud sessions boot knowing your whole codebase**.
+Your Claude Code cloud sessions, booted knowing your whole codebase. `blitzos` is a free, open-source skill that builds a thin private **context repo** so cloud sessions start warm — your repos, conventions, and a running work log — without copying code, history, or secrets.
 
-It discovers your repositories, lets you declare the Claude.ai connectors you already use, and generates a thin private context repository. Select that repository beside your work repositories in Claude cloud to carry repository context and a concise work log from session to session—without copying source code, Git history, connector data, or secrets.
+Early and rough in places.
 
-BlitzOS is early. Expect rough edges and a few manual setup steps while the cloud workflow settles.
+**Managed BlitzOS** — want this for your team, with a credential vault, per-task scoped access, and your own VPC? [Join the waitlist →](https://blitzos.app.blitz.dev)
 
 ## Quickstart
 
-You need Claude Code, Git, GitHub CLI (`gh`) authenticated to the account that will own the generated private context repository, `jq`, and Node.js 18 or newer.
+Needs Claude Code, Git, `gh` (authenticated), `jq`, and Node 18+.
 
 ```sh
 git clone https://github.com/blitzdotdev/blitzos.git
-cd blitzos
-./install.sh
-claude "set up cloud claude"
+cd blitzos && ./install.sh
+claude "set up blitzos"
 ```
 
-The installer links the bundled skill into `~/.claude/skills`. The setup flow scans repository metadata, opens a localhost wizard, shows the complete company-context draft for approval, and creates a new private GitHub repository only after you approve it.
-
-## Turn on Full network access
-
-For the Claude cloud environment you will use:
-
-1. Open the environment settings in Claude.
-2. Find **Network access**.
-3. Select **Full** and save the environment.
-
-This setting controls network reachability. It does not add deployment credentials or expose secrets to the generated context repository.
-
-## One-time Claude <-> GitHub connect
-
-1. Connect GitHub to Claude if it is not connected already.
-2. Allow Claude access to the generated context repository and each work repository you want available in cloud sessions.
-3. In [claude.ai/code](https://claude.ai/code), start a session and select the context repository together with the relevant work repositories.
-
-Repository access is still governed by the permissions you grant through GitHub and Claude.
+The skill scans your repos, opens a localhost wizard, shows a context draft for your approval, and creates a private context repo. Then in [claude.ai/code](https://claude.ai/code), select that repo alongside your work repos and start a session.
 
 ## What you get
 
-- Warm multi-repo context: Claude starts with the approved repository map, relationships, conventions, and recent work records.
-- Your Claude connectors: ask Claude to check Linear, Slack, Gmail, or other connectors already connected to your Claude account when a task needs that context.
-- A real cloud VM: install dependencies and build or test across the selected work repositories.
-- A warm-start session log: short factual records in `sessions/` accrue across sessions so later work can pick up where earlier work stopped.
+- **Warm multi-repo context** — sessions start with your repo map, conventions, and recent work log.
+- **Your connectors** — Claude can use Linear, Slack, or Gmail when they're connected to your account.
+- **A real cloud VM** — install, build, and test across your repos.
+- **A session log** — short records in `sessions/` carry work forward between sessions.
 
-## How it works
+The default **Trusted** network is enough — git and connectors use separate proxies, and registries are reachable. Only widen it (prefer **Custom** over **Full**) if a task must reach an outside host.
 
-The generated private repository contains only:
+## Not yet
 
-- `CLAUDE.md`, with the approved repository map, conventions, connector guidance, and warm-start instructions;
-- `sessions/README.md`, with the concise session-record convention and template; and
-- an initially empty `sessions/INDEX.md`, which becomes the chronological lookup for prior work.
-
-The skill never vendors work repositories or copies their Git history. It does not inspect connector accounts, read secret values, or write secret values to the generated repository.
-
-## What it doesn't do (yet)
-
-- The free tier does not provide managed credentials, deployment automation, or per-task credential scoping.
-- It is Claude-only today. Codex support is coming.
-- Pushing session records back to the context repository from Claude cloud is experimental and remains unverified across the supported session paths.
-
-## Managed BlitzOS
-
-Want this managed for your team — vault, per-task scoped credentials, your own VPC? Join the waitlist: https://blitzos.app.blitz.dev
+Claude-only (Codex coming). The free tier has no managed credentials, deploy, or per-task scoping — that's [Managed BlitzOS](https://blitzos.app.blitz.dev). Pushing the session log back from cloud is experimental.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

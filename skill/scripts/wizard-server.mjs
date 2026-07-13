@@ -18,7 +18,7 @@ const BUILT_IN_CONNECTORS = new Map([
 const MAX_BODY_BYTES = 256 * 1024;
 
 function fail(message) {
-  process.stderr.write(`cloud-claude wizard: ${message}\n`);
+  process.stderr.write(`blitzos wizard: ${message}\n`);
   process.exit(1);
 }
 

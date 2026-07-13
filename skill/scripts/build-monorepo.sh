@@ -8,7 +8,7 @@ usage() {
 }
 
 fail() {
-  printf 'cloud-claude build: %s\n' "$1" >&2
+  printf 'blitzos build: %s\n' "$1" >&2
   exit 1
 }
 
@@ -53,7 +53,7 @@ plan_file=$1
 for dependency in jq git; do
   command -v "$dependency" >/dev/null 2>&1 || fail "$dependency is required"
 done
-if [ "${CLOUD_CLAUDE_NO_PUSH:-0}" != 1 ]; then
+if [ "${BLITZOS_NO_PUSH:-0}" != 1 ]; then
   command -v gh >/dev/null 2>&1 || fail "gh is required"
 fi
 
@@ -110,7 +110,7 @@ case "$slug" in
   ''|.|..|*[!A-Za-z0-9._-]*) fail "invalid slug: $slug" ;;
 esac
 
-if [ "${CLOUD_CLAUDE_NO_PUSH:-0}" != 1 ]; then
+if [ "${BLITZOS_NO_PUSH:-0}" != 1 ]; then
   if ! gh auth status >/dev/null 2>&1; then
     fail 'GitHub CLI is not authenticated; run gh auth login, then retry'
   fi
@@ -119,11 +119,11 @@ if [ "${CLOUD_CLAUDE_NO_PUSH:-0}" != 1 ]; then
   fi
 fi
 
-output_root=${CLOUD_CLAUDE_OUT_DIR:-"$HOME/cloud-claude-out"}
+output_root=${BLITZOS_OUT_DIR:-"$HOME/blitzos-out"}
 target="$output_root/$slug"
 [ ! -e "$target" ] || fail "output already exists: $target"
 
-tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/cloud-claude-build.XXXXXX")
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/blitzos-build.XXXXXX")
 chmod 700 "$tmp_dir"
 cleanup() {
   rm -rf "$tmp_dir"
@@ -187,13 +187,13 @@ unexpected_session=$(find "$target/sessions" -mindepth 1 -maxdepth 1 \
 [ ! -s "$target/sessions/INDEX.md" ] || fail 'session index must be empty in a new context repository'
 
 git -C "$target" add -- CLAUDE.md sessions/README.md sessions/INDEX.md
-if ! git -c user.name=cloud-claude \
-  -c user.email=cloud-claude@users.noreply.github.com \
+if ! git -c user.name=blitzos \
+  -c user.email=blitzos@users.noreply.github.com \
   -C "$target" commit -m 'Add company context for Claude' >/dev/null 2>&1; then
   fail "git commit failed in $target; no GitHub repository was created"
 fi
 
-if [ "${CLOUD_CLAUDE_NO_PUSH:-0}" = 1 ]; then
+if [ "${BLITZOS_NO_PUSH:-0}" = 1 ]; then
   printf 'NO_PUSH: thin context repository built at %s\n' "$target"
 else
   if ! gh repo create "$slug" --private --source "$target" --remote origin --push \

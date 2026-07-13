@@ -3,12 +3,12 @@
 set -euo pipefail
 
 if ! command -v jq >/dev/null 2>&1; then
-  printf 'cloud-claude scan: jq is required\n' >&2
+  printf 'blitzos scan: jq is required\n' >&2
   exit 1
 fi
 
 projects_root=${CLAUDE_PROJECTS_DIR:-"$HOME/.claude/projects"}
-tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/cloud-claude-scan.XXXXXX")
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/blitzos-scan.XXXXXX")
 chmod 700 "$tmp_dir"
 cleanup() {
   rm -rf "$tmp_dir"
@@ -259,16 +259,16 @@ fi
 github_repos="$tmp_dir/github-repos.jsonl"
 : > "$github_repos"
 if ! command -v gh >/dev/null 2>&1; then
-  printf 'cloud-claude scan: GitHub CLI unavailable; only local repositories were scanned\n' >&2
+  printf 'blitzos scan: GitHub CLI unavailable; only local repositories were scanned\n' >&2
 elif ! gh auth status >/dev/null 2>&1; then
-  printf 'cloud-claude scan: GitHub CLI is not authenticated; only local repositories were scanned\n' >&2
+  printf 'blitzos scan: GitHub CLI is not authenticated; only local repositories were scanned\n' >&2
 else
   collect_gh_repos() {
     local owner=$1 output_file="$tmp_dir/gh-list.$$.json"
     if ! gh repo list "$owner" --limit 1000 \
       --json nameWithOwner,updatedAt,isPrivate,description,defaultBranchRef \
       > "$output_file" 2>/dev/null; then
-      printf 'cloud-claude scan: GitHub repository listing failed for %s; continuing\n' "$owner" >&2
+      printf 'blitzos scan: GitHub repository listing failed for %s; continuing\n' "$owner" >&2
       return
     fi
     jq -c '.[]
@@ -296,7 +296,7 @@ else
   if github_user=$(gh api user --jq '.login' 2>/dev/null) && [ -n "$github_user" ]; then
     collect_gh_repos "$github_user"
   else
-    printf 'cloud-claude scan: GitHub user lookup failed; continuing with organization repositories\n' >&2
+    printf 'blitzos scan: GitHub user lookup failed; continuing with organization repositories\n' >&2
   fi
 
   if gh api user/orgs --paginate --jq '.[].login' > "$tmp_dir/gh-orgs.txt" 2>/dev/null; then
@@ -305,7 +305,7 @@ else
       collect_gh_repos "$org"
     done < "$tmp_dir/gh-orgs.txt"
   else
-    printf 'cloud-claude scan: GitHub organization listing failed; continuing\n' >&2
+    printf 'blitzos scan: GitHub organization listing failed; continuing\n' >&2
   fi
 fi
 
@@ -346,7 +346,7 @@ jq -s \
 jq -r '
   ([.repos[] | select(.source == "local")] | length) as $local_count
   | ([.repos[] | select(.source == "github")] | length) as $github_count
-  | "cloud-claude scan: \(.repos | length) repositories after origin dedupe; \($local_count) local git roots; \($github_count) GitHub-only",
+  | "blitzos scan: \(.repos | length) repositories after origin dedupe; \($local_count) local git roots; \($github_count) GitHub-only",
   (.repos
     | map(select(.source == "local"))
     | .[0:5][]

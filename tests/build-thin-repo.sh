@@ -4,7 +4,7 @@ set -euo pipefail
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
 builder="$repo_dir/skill/scripts/build-monorepo.sh"
-tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/cloud-claude-test.XXXXXX")
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/blitzos-test.XXXXXX")
 cleanup() {
   rm -rf "$tmp_dir"
 }
@@ -64,7 +64,7 @@ Session push-back depends on this context repository being selected in the sessi
   '{slug: $slug, repos: [{name: "acme/api", origin: "https://github.com/acme/api.git", branch: "main"}], connectors: ["GitHub"], company_claude_md: $md}' \
   > "$plan"
 
-CLOUD_CLAUDE_NO_PUSH=1 CLOUD_CLAUDE_OUT_DIR="$tmp_dir/out" \
+BLITZOS_NO_PUSH=1 BLITZOS_OUT_DIR="$tmp_dir/out" \
   "$builder" "$plan" > "$tmp_dir/build.out"
 
 target="$tmp_dir/out/company-context"
@@ -89,7 +89,7 @@ grep -Fq 'YYYY-MM-DD | short-task-slug | one-line summary' "$target/sessions/REA
 bad_plan="$tmp_dir/bad-plan.json"
 jq '.slug = "bad-headings" | .company_claude_md |= sub("## Repositories"; "## Repository map")' \
   "$plan" > "$bad_plan"
-if CLOUD_CLAUDE_NO_PUSH=1 CLOUD_CLAUDE_OUT_DIR="$tmp_dir/out" \
+if BLITZOS_NO_PUSH=1 BLITZOS_OUT_DIR="$tmp_dir/out" \
   "$builder" "$bad_plan" > "$tmp_dir/bad.out" 2> "$tmp_dir/bad.err"; then
   printf 'builder accepted a plan without the exact required headings\n' >&2
   exit 1
@@ -99,7 +99,7 @@ grep -Fq 'plan does not match the thin context-repository schema' "$tmp_dir/bad.
 setup_plan="$tmp_dir/setup-plan.json"
 jq '.slug = "setup-not-allowed" | .setup_script = "#!/usr/bin/env bash"' \
   "$plan" > "$setup_plan"
-if CLOUD_CLAUDE_NO_PUSH=1 CLOUD_CLAUDE_OUT_DIR="$tmp_dir/out" \
+if BLITZOS_NO_PUSH=1 BLITZOS_OUT_DIR="$tmp_dir/out" \
   "$builder" "$setup_plan" > "$tmp_dir/setup.out" 2> "$tmp_dir/setup.err"; then
   printf 'builder accepted a setup script in a thin context repository\n' >&2
   exit 1
