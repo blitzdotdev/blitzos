@@ -1,4 +1,13 @@
-# BlitzOS
+<div align="center">
+  <h1>BlitzOS</h1>
+  <p><b>Claude/Codex Cloud VMs that boot knowing your whole codebase</b></p>
+
+  [![Website](https://img.shields.io/badge/blitzos.com-website-black)](https://blitzos.com)
+  [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/v3vQdAgPq6)
+  [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+</div>
+
+<br />
 
 Your Claude Code cloud sessions, booted knowing your whole codebase. `blitzos` is a free, open-source skill that builds a thin private **context repo** so cloud sessions start warm: your repos, conventions, and a running work log, without copying code, history, or secrets.
 
