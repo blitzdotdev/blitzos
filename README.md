@@ -9,15 +9,19 @@
 
 <br />
 
-Your Claude Code cloud sessions, booted knowing your whole codebase. `blitzos` is a free, open-source skill that builds a thin private **context repo** so cloud sessions start warm: your repos, conventions, and a running work log, without copying code, history, or secrets.
+**One launch link. Your whole codebase inside.** `blitzos` is a free, open-source skill that builds a private context monorepo so Claude Code cloud sessions start warm with your repos, conventions, and running work log.
 
 Early and rough in places.
 
-## Managed BlitzOS
-
-want this for your team, with a credential vault, per-task scoped access, and your own VPC? [Join the waitlist](https://blitzos.app.blitz.dev)
+**Managed BlitzOS:** want this for your team, with a credential vault, per-task scoped access, and your own VPC? [Join the waitlist →](https://blitzos.com/waitlist)
 
 ## Quickstart
+
+### Two ways to set up
+
+**Browser:** Go to [blitzos.com](https://blitzos.com) for the fastest setup, GitHub sign-in, repo selection, one-click launches, and a launch feed.
+
+**Local:** Use this skill for a private setup that grants nothing to BlitzOS servers and drafts evidence-based conventions from local repos.
 
 Needs Claude Code, Git, `gh` (authenticated), `jq`, and Node 18+.
 
@@ -27,28 +31,32 @@ cd blitzos && ./install.sh
 claude "set up blitzos"
 ```
 
-The skill scans your repos, opens a localhost wizard, shows a context draft for your approval, and creates a private context repo. Then in [claude.ai/code](https://claude.ai/code), select that repo alongside your work repos and start a session.
+The skill scans your repos, opens a localhost wizard, shows the company context for your approval, and creates a private context monorepo. It returns one Claude Code launch link that pre-selects the context repo plus every work repo. Open it, select nothing manually, and click Start.
 
 ## What you get
 
-- **Warm multi-repo context** — sessions start with your repo map, conventions, and recent work log.
-- **Your connectors** — Claude can use Linear, Slack, or Gmail when they're connected to your account.
-- **A real cloud VM** — install, build, and test across your repos.
-- **A session log** — short records in `sessions/` carry work forward between sessions.
+- **One-click launch:** a launch link that pre-selects all your repos in the right order.
+- **Warm multi-repo context:** sessions start with conventions and recent work records.
+- **Native repository access:** Claude works directly in each selected checkout and can push branches and open PRs.
+- **Your connectors:** Claude can use Linear, Slack, Gmail, and other connectors already connected to your account.
+- **Cross-repo delivery:** record member-repo PRs and decisions in one shared session log.
 
-The default **Trusted** network is enough — git and connectors use separate proxies, and registries are reachable. Only widen it (prefer **Custom** over **Full**) if a task must reach an outside host.
+The default **Trusted** network setting is enough.
+
+## Security model
+
+The default flow needs zero credentials. The launch link selects the context monorepo and every member repo through Anthropic's native GitHub proxy, so reads, writes, pushes, and PRs stay on Claude's native repository rail. No PAT is used anywhere in the default path.
+
+Optional power mode selects only the context monorepo and materializes member repos as submodules with `bootstrap.sh`. It uses a scoped, expiring fine-grained PAT stored only in your **personal** Claude cloud environment, never in Git. Anthropic warns that environment variables are visible to anyone using an environment, so never use this mode in a shared environment. Follow the generated `docs/CLOUD-SETUP.md` if you intentionally choose it.
 
 ## Not yet
 
-Claude-only (Codex coming). The free tier has no managed credentials, deploy, or per-task scoping — that's [Managed BlitzOS](https://blitzos.app.blitz.dev). Pushing the session log back from cloud is experimental.
+Claude-only (Codex coming). The free tier has no managed credentials, deploy, or per-task scoping. Those are part of [Managed BlitzOS](https://blitzos.com/waitlist).
 
 ## Troubleshooting
 
-**Claude can "add" files from my repo but 404s when I ask it to read the repo — even with full access.**
-You're likely using the **GitHub connector in regular Claude chat**, which only attaches individual files. To have Claude actually read and work *across* a repo, use **Claude Code on the web** — [claude.ai/code](https://claude.ai/code): connect GitHub there, then **select the repo when you start a session**. The session clones the whole repo into its environment and reads files natively — no 404. The chat connector and the coding session are different surfaces; this skill targets the coding session.
-
-Still 404ing in claude.ai/code? Make sure the **Claude GitHub App is authorized on that specific repo** (GitHub → Settings → Applications → Claude). Org-owned and private repos often need to be granted individually, even if your account already has "full access."
+If a repo is missing in the default flow, confirm the Claude GitHub App can access that repository, then reopen the generated launch link. In optional power mode, open the generated `docs/CLOUD-SETUP.md` for token setup and rotation steps.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
