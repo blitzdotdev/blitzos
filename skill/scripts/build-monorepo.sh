@@ -268,7 +268,7 @@ If both yield nothing or errors, or the variable is unset: skip status reporting
 
 ## Context initialization
 
-If any section below contains the marker PLACEHOLDER, this context repo is not initialized yet. In your first session, before or alongside the user's task: explore each member repository (README, top-level CLAUDE.md, package manifests, directory structure), then rewrite "## How repositories relate" and "## User conventions" with concise, evidence-based content citing repository paths. Delete the PLACEHOLDER markers, keep the added content under 60 lines total, commit to this repository with the message "context: initialize from first session", and push through the normal selected-repository rail. If the user's task is urgent, do the task first and initialize before ending the session. If no PLACEHOLDER marker remains anywhere, ignore this section.
+If any section below contains the marker PLACEHOLDER, this context repo is not initialized yet. In your first session, before or alongside the user's task: explore each member repository (README, top-level CLAUDE.md, package manifests, directory structure), then rewrite "## How repositories relate" and "## User conventions" with concise, evidence-based content citing repository paths. Delete the PLACEHOLDER markers, keep the added content under 60 lines total, commit it on the default branch — in this repository run `git checkout main && git pull --ff-only` before committing, use the message "context: initialize from first session", and push with `git push origin main`. If the rail rejects the push to main, push your working branch and tell the user the initialization needs a merge to main. If the user's task is urgent, do the task first and initialize before ending the session. If no PLACEHOLDER marker remains anywhere, ignore this section.
 
 ## Skills
 
@@ -309,7 +309,9 @@ Use this template:
 
 Keep records short and factual. They are work records, not reflective "lessons learned" commentary. Write one file per session, never duplicate a record or index entry, and write nothing if no meaningful work happened.
 
-In DEFAULT mode, stage only the session files and leave `repos/` gitlinks unchanged. In POWER MODE, stage changed gitlinks with the session files. Commit the applicable updates on the monorepo working branch and use plain `git push`. The selected monorepo uses Claude's native GitHub rail; do not attach `BLITZOS_GIT_TOKEN` to that push.
+For the default-branch write-back, DEFAULT mode includes only the session files and leaves `repos/` gitlinks unchanged. In POWER MODE, also stage changed gitlinks with the session files after checking out the default branch.
+
+Session records belong on the default branch, not your task branch. In the context repo: run `git checkout main && git pull --ff-only`, commit the session record and index update there, and push with `git push origin main`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it.
 EOF
 chmod 600 "$sessions_readme"
 

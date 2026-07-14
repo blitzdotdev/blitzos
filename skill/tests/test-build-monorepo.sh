@@ -117,11 +117,13 @@ No conventions were observed.
 - POWER MODE: when only the context monorepo exists and member sibling checkouts are absent, run `bash bootstrap.sh`; this requires `BLITZOS_GIT_TOKEN`. Work under `repos/<name>`, use `GH_TOKEN="$BLITZOS_GIT_TOKEN" gh pr create`, and stage changed gitlinks.
 - If the mode is ambiguous, stop before bootstrapping.
 
-Push the context monorepo session log with plain `git push` in both modes.
+Follow the default-branch write-back and fallback instructions below for context-monorepo session updates.
 
 ## Session log (warm start)
 
-Detect the session mode, then read `sessions/INDEX.md`. Write `sessions/<YYYY-MM-DD>-<short-task-slug>.md` with `## What changed`, `## Key decisions`, and `## For next session`, cross-link the PR URLs, then update the index. Stage gitlinks only in POWER MODE.
+Detect the session mode, then read `sessions/INDEX.md`. Write `sessions/<YYYY-MM-DD>-<short-task-slug>.md` with `## What changed`, `## Key decisions`, and `## For next session`, cross-link the PR URLs, then update the index. Once on the default branch, stage gitlinks only in POWER MODE.
+
+Session records belong on the default branch, not your task branch. In the context repo: run `git checkout main && git pull --ff-only`, commit the session record and index update there, and push with `git push origin main`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it.
 EOF
 )
 
@@ -326,9 +328,9 @@ check 'CLAUDE.md contains the mode-aware heading' \
 check 'CLAUDE.md default mode uses native sibling checkouts' \
   sh -c 'grep -Fq "DEFAULT mode" "$1" && grep -Fq "sibling checkouts" "$1" && grep -Fq "Do not run \`bash bootstrap.sh\`" "$1"' \
   sh "$target/CLAUDE.md"
-check 'CLAUDE.md power mode requires the token-backed bootstrap' \
-  sh -c 'grep -Fq "POWER MODE" "$1" && grep -Fq "requires \`BLITZOS_GIT_TOKEN\`" "$1" && grep -Fq "stage changed gitlinks" "$1"' \
-  sh "$target/CLAUDE.md"
+check 'generated guidance covers power mode and the default-branch session write-back' \
+  sh -c 'grep -Fq "POWER MODE" "$1" && grep -Fq "requires \`BLITZOS_GIT_TOKEN\`" "$1" && grep -Fq "stage changed gitlinks" "$1" && grep -Fqx "Session records belong on the default branch, not your task branch. In the context repo: run \`git checkout main && git pull --ff-only\`, commit the session record and index update there, and push with \`git push origin main\`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it." "$1" && grep -Fqx "Session records belong on the default branch, not your task branch. In the context repo: run \`git checkout main && git pull --ff-only\`, commit the session record and index update there, and push with \`git push origin main\`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it." "$2"' \
+  sh "$target/CLAUDE.md" "$target/sessions/README.md"
 check 'CLAUDE.md places Session status as the first H2 section' \
   test "$(awk '/^## / { print; exit }' "$target/CLAUDE.md")" = '## Session status'
 check 'CLAUDE.md places Context initialization and Skills immediately after Session status' \
@@ -364,7 +366,7 @@ expected_context_initialization="$tmp_dir/expected-context-initialization.md"
 cat > "$expected_context_initialization" <<'EOF'
 ## Context initialization
 
-If any section below contains the marker PLACEHOLDER, this context repo is not initialized yet. In your first session, before or alongside the user's task: explore each member repository (README, top-level CLAUDE.md, package manifests, directory structure), then rewrite "## How repositories relate" and "## User conventions" with concise, evidence-based content citing repository paths. Delete the PLACEHOLDER markers, keep the added content under 60 lines total, commit to this repository with the message "context: initialize from first session", and push through the normal selected-repository rail. If the user's task is urgent, do the task first and initialize before ending the session. If no PLACEHOLDER marker remains anywhere, ignore this section.
+If any section below contains the marker PLACEHOLDER, this context repo is not initialized yet. In your first session, before or alongside the user's task: explore each member repository (README, top-level CLAUDE.md, package manifests, directory structure), then rewrite "## How repositories relate" and "## User conventions" with concise, evidence-based content citing repository paths. Delete the PLACEHOLDER markers, keep the added content under 60 lines total, commit it on the default branch — in this repository run `git checkout main && git pull --ff-only` before committing, use the message "context: initialize from first session", and push with `git push origin main`. If the rail rejects the push to main, push your working branch and tell the user the initialization needs a merge to main. If the user's task is urgent, do the task first and initialize before ending the session. If no PLACEHOLDER marker remains anywhere, ignore this section.
 EOF
 actual_context_initialization="$tmp_dir/actual-context-initialization.md"
 awk '

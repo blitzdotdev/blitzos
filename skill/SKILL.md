@@ -69,7 +69,7 @@ In `## Working across repositories`, include a `### Session mode` subsection and
 2. **DEFAULT mode:** when every listed member repository exists as a native sibling checkout alongside the context monorepo, work directly in those sibling checkouts. Do not run `bash bootstrap.sh`. Create task branches in affected sibling repositories, commit there, and push or open PRs normally through Claude's native selected-repository GitHub rail. Do not set `GH_TOKEN`, use `BLITZOS_GIT_TOKEN`, or update the monorepo's `repos/` gitlinks in this mode.
 3. **POWER MODE:** when only the context monorepo is present and all member repositories are absent as sibling checkouts, run `bash bootstrap.sh` first; this requires `BLITZOS_GIT_TOKEN`. If it fails, stop and follow `docs/CLOUD-SETUP.md`; never ask the user to paste a token into chat, the wizard, or a CLI. Work in `repos/<name>`, create and push task branches there, and open each subrepository PR with `GH_TOKEN="$BLITZOS_GIT_TOKEN" gh pr create ...`. Never persist the token in Git config or a remote URL.
 4. If only some member repositories exist as sibling checkouts or the mode is otherwise ambiguous, stop before running the bootstrap and ask the user to relaunch from the exact link in `README.md` or intentionally follow `docs/CLOUD-SETUP.md` for power mode.
-5. Cross-link every member-repository PR URL in the session record. Push session-log updates to the context monorepo with plain `git push` in both modes. Do not set `GH_TOKEN`, change the parent remote, or install a parent credential helper for that push because Claude's native selected-repository rail handles it.
+5. Cross-link every member-repository PR URL in the session record. Follow the default-branch write-back and fallback instructions in `## Session log (warm start)` for context-monorepo session updates. Do not set `GH_TOKEN`, change the parent remote, or install a parent credential helper for those pushes because Claude's native selected-repository rail handles them.
 
 Include this session block verbatim:
 
@@ -100,9 +100,9 @@ At the end of meaningful work:
    ```
 
 2. Append one line to `sessions/INDEX.md` in the form `YYYY-MM-DD | short-task-slug | one-line summary`.
-3. In DEFAULT mode, stage only the session record and index in the context monorepo; do not update or stage `repos/` gitlinks.
-4. In POWER MODE, return to the monorepo working branch and stage every changed pointer with `git add repos/<name>` plus the session record and index.
-5. Commit the applicable session updates and use plain `git push` through the selected-repository rail.
+3. In DEFAULT mode, once on the default branch, stage only the session record and index in this context monorepo. Do not update or stage `repos/` gitlinks.
+4. In POWER MODE, once on the default branch, stage every changed pointer with `git add repos/<name>` plus the session record and index.
+5. Session records belong on the default branch, not your task branch. In the context repo: run `git checkout main && git pull --ff-only`, commit the session record and index update there, and push with `git push origin main`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it.
 
 Keep each record short and factual: it is a work record, not reflective "lessons learned" commentary. Write one file per session and never duplicate a record or index entry. If nothing meaningful happened, write nothing.
 ````
