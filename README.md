@@ -5,6 +5,8 @@
   [![Website](https://img.shields.io/badge/blitzos.com-website-black)](https://blitzos.com)
   [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/v3vQdAgPq6)
   [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+  <img src="docs/blitzos-poster.png" alt="How BlitzOS works: pick your repos, BlitzOS builds a context repo (CLAUDE.md, .gitmodules, sessions/), and cloud agents boot already knowing your work. Close laptop — work continues." width="100%" />
 </div>
 
 <br />
