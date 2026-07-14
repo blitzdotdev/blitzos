@@ -1,10 +1,10 @@
 # BlitzOS
 
-Your Claude Code cloud sessions, booted knowing your whole codebase. `blitzos` is a free, open-source skill that builds a thin private **context repo** so cloud sessions start warm — your repos, conventions, and a running work log — without copying code, history, or secrets.
+Your Claude Code cloud sessions, booted knowing your whole codebase. `blitzos` is a free, open-source skill that builds a thin private **context repo** so cloud sessions start warm: your repos, conventions, and a running work log, without copying code, history, or secrets.
 
 Early and rough in places.
 
-**Managed BlitzOS** — want this for your team, with a credential vault, per-task scoped access, and your own VPC? [Join the waitlist →](https://blitzos.app.blitz.dev)
+**Managed BlitzOS** want this for your team, with a credential vault, per-task scoped access, and your own VPC? [Join the waitlist →](https://blitzos.app.blitz.dev)
 
 ## Quickstart
 
