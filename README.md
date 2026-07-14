@@ -1,6 +1,6 @@
 <div align="center">
   <h1>BlitzOS</h1>
-  <p><b>Cloud coding agents that boot already knowing your work, and keep working with your laptop closed</b></p>
+  <p><b>Cloud agents that boot already knowing your work, and keep working with your laptop closed</b></p>
 
   [![Website](https://img.shields.io/badge/blitzos.com-website-black)](https://blitzos.com)
   [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/v3vQdAgPq6)
