@@ -135,6 +135,7 @@ jq -n \
       {name: "test-owner/beta", origin: "https://github.com/test-owner/beta.git", branch: "stable"}
     ],
     connectors: ["GitHub"],
+    skills: [],
     company_claude_md: $company_claude_md
   }' > "$plan"
 
@@ -169,6 +170,19 @@ check 'generated README.md contains the clickable launch URL' \
   grep -Fxq "[Launch this workspace in Claude Code]($expected_launch_url)" "$target/README.md"
 check 'generated README.md points to optional power mode setup' \
   grep -Fq '[docs/CLOUD-SETUP.md](docs/CLOUD-SETUP.md)' "$target/README.md"
+expected_skills_readme="$tmp_dir/expected-skills-README.md"
+cat > "$expected_skills_readme" <<'EOF'
+# Skills
+
+Skills in this folder travel with the context repo: BlitzOS installs them into cloud sessions automatically.
+
+Add a skill as skills/<name>/SKILL.md (plus any supporting files). Import your local skills from the context repo page on blitzos.com, or let a cloud agent author new ones here.
+EOF
+check 'skills scaffold is always present with the exact content' \
+  cmp -s "$expected_skills_readme" "$target/skills/README.md"
+check 'empty skills array emits only the skills scaffold' \
+  sh -c '! find "$1" -mindepth 1 -maxdepth 1 ! -name README.md -print -quit | grep -q .' \
+  sh "$target/skills"
 
 check 'alpha is a mode-160000 gitlink at the resolved SHA' \
   test "$alpha_entry" = "160000 $alpha_sha 0"$'\t'"repos/alpha"
@@ -343,6 +357,112 @@ awk '
 check 'CLAUDE.md contains the exact file-first Session status section' \
   cmp -s "$expected_status" "$actual_status"
 
+test_home="$tmp_dir/test-home"
+mkdir -p "$test_home/.claude/skills/release-checks/support"
+cat > "$test_home/.claude/skills/release-checks/SKILL.md" <<'EOF'
+---
+name: release-checks
+description: Verify a release candidate before handoff.
+---
+
+# Release checks
+
+Run the bundled checklist.
+EOF
+cat > "$test_home/.claude/skills/release-checks/support/check.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'release fixture\n'
+EOF
+chmod 755 "$test_home/.claude/skills/release-checks/support/check.sh"
+printf 'outside symlink target\n' > "$tmp_dir/outside-skill-file.txt"
+ln -s "$tmp_dir/outside-skill-file.txt" \
+  "$test_home/.claude/skills/release-checks/support/linked.txt"
+
+selected_plan="$tmp_dir/selected-plan.json"
+jq '.slug = "selected-context" | .skills = ["release-checks"]' "$plan" > "$selected_plan"
+selected_output="$tmp_dir/selected-build.out"
+PATH="$stub_dir:$PATH" \
+HOME="$test_home" \
+TEST_ALPHA_SHA="$alpha_sha" \
+TEST_BETA_SHA="$beta_sha" \
+BLITZOS_NO_PUSH=1 \
+BLITZOS_OUT_DIR="$tmp_dir/out" \
+  "$builder" "$selected_plan" > "$selected_output" 2>&1
+selected_status=$?
+if [ "$selected_status" -eq 0 ]; then
+  pass 'builder succeeds with one selected local skill'
+else
+  fail_test 'builder succeeds with one selected local skill'
+  sed -n '1,200p' "$selected_output" >&2
+fi
+selected_target="$tmp_dir/out/selected-context"
+check 'selected skill files copy intact recursively' \
+  sh -c 'cmp -s "$1/SKILL.md" "$2/SKILL.md" && cmp -s "$1/support/check.sh" "$2/support/check.sh" && test -x "$2/support/check.sh"' \
+  sh "$test_home/.claude/skills/release-checks" "$selected_target/skills/release-checks"
+check 'symlinks inside a selected skill are skipped' \
+  test ! -e "$selected_target/skills/release-checks/support/linked.txt"
+
+mkdir -p "$test_home/.claude/skills/secret-skill"
+cat > "$test_home/.claude/skills/secret-skill/SKILL.md" <<'EOF'
+---
+name: secret-skill
+description: Secret guard failure fixture.
+---
+EOF
+printf 'github_pat_XXXX_FAKE\n' > "$test_home/.claude/skills/secret-skill/notes.txt"
+secret_skill_plan="$tmp_dir/secret-skill-plan.json"
+jq '.slug = "secret-skill-context" | .skills = ["secret-skill"]' "$plan" > "$secret_skill_plan"
+secret_skill_output="$tmp_dir/secret-skill.out"
+PATH="$stub_dir:$PATH" \
+HOME="$test_home" \
+TEST_ALPHA_SHA="$alpha_sha" \
+TEST_BETA_SHA="$beta_sha" \
+BLITZOS_NO_PUSH=1 \
+BLITZOS_OUT_DIR="$tmp_dir/out" \
+  "$builder" "$secret_skill_plan" > "$secret_skill_output" 2>&1
+secret_skill_status=$?
+if [ "$secret_skill_status" -ne 0 ]; then
+  pass 'secret guard aborts a build with credential material in a selected skill'
+else
+  fail_test 'secret guard aborts a build with credential material in a selected skill'
+fi
+check 'selected-skill secret rejection names the offending file' \
+  grep -Fq 'secret-skill/notes.txt' "$secret_skill_output"
+check 'selected-skill secret rejection creates no output repository' \
+  test ! -e "$tmp_dir/out/secret-skill-context"
+
+mkdir -p "$test_home/.claude/skills/oversized-skill"
+cat > "$test_home/.claude/skills/oversized-skill/SKILL.md" <<'EOF'
+---
+name: oversized-skill
+description: Size limit fixture.
+---
+EOF
+dd if=/dev/zero of="$test_home/.claude/skills/oversized-skill/payload.bin" \
+  bs=1048576 count=2 >/dev/null 2>&1
+printf x >> "$test_home/.claude/skills/oversized-skill/payload.bin"
+oversized_plan="$tmp_dir/oversized-plan.json"
+jq '.slug = "oversized-context" | .skills = ["oversized-skill"]' "$plan" > "$oversized_plan"
+oversized_output="$tmp_dir/oversized.out"
+PATH="$stub_dir:$PATH" \
+HOME="$test_home" \
+TEST_ALPHA_SHA="$alpha_sha" \
+TEST_BETA_SHA="$beta_sha" \
+BLITZOS_NO_PUSH=1 \
+BLITZOS_OUT_DIR="$tmp_dir/out" \
+  "$builder" "$oversized_plan" > "$oversized_output" 2>&1
+oversized_status=$?
+if [ "$oversized_status" -ne 0 ]; then
+  pass 'builder rejects a selected skill larger than 2 MB'
+else
+  fail_test 'builder rejects a selected skill larger than 2 MB'
+fi
+check 'oversized-skill rejection explains the limit and offending file' \
+  sh -c 'grep -Fq "2 MB limit" "$1" && grep -Fq "oversized-skill/payload.bin" "$1"' \
+  sh "$oversized_output"
+check 'oversized-skill rejection creates no output repository' \
+  test ! -e "$tmp_dir/out/oversized-context"
+
 environment_output="$tmp_dir/environment-build.out"
 PATH="$stub_dir:$PATH" \
 TEST_ALPHA_SHA="$alpha_sha" \
@@ -397,5 +517,24 @@ check 'secret rejection explains credential material' \
   grep -Eiq 'credential material|secret value' "$negative_output"
 check 'secret rejection creates no output repository' \
   test ! -e "$tmp_dir/out/rejected-context"
+
+reserved_skill_plan="$tmp_dir/reserved-skill-plan.json"
+jq '.slug = "reserved-skill-context" | .skills = ["README.md"]' \
+  "$plan" > "$reserved_skill_plan"
+reserved_skill_output="$tmp_dir/reserved-skill.out"
+PATH="$stub_dir:$PATH" \
+TEST_ALPHA_SHA="$alpha_sha" \
+TEST_BETA_SHA="$beta_sha" \
+BLITZOS_NO_PUSH=1 \
+BLITZOS_OUT_DIR="$tmp_dir/out" \
+  "$builder" "$reserved_skill_plan" > "$reserved_skill_output" 2>&1
+reserved_skill_status=$?
+if [ "$reserved_skill_status" -ne 0 ]; then
+  pass 'builder rejects a skill name reserved by the generated scaffold'
+else
+  fail_test 'builder rejects a skill name reserved by the generated scaffold'
+fi
+check 'reserved skill name rejection creates no output repository' \
+  test ! -e "$tmp_dir/out/reserved-skill-context"
 
 finish

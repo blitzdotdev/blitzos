@@ -118,9 +118,21 @@ function connectorName(value) {
   return BUILT_IN_CONNECTORS.get(trimmed.toLowerCase()) || trimmed;
 }
 
+function validSkillFolder(value) {
+  if (typeof value !== 'string') return false;
+  const lower = value.toLowerCase();
+  return value.length > 0
+    && value.length <= 255
+    && value !== '.'
+    && value !== '..'
+    && lower !== 'readme.md'
+    && lower !== '.git'
+    && /^[^/\u0000-\u001f\u007f]+$/.test(value);
+}
+
 async function validateSelection(selection, scan) {
-  if (!isRecord(selection) || !exactKeys(selection, ['slug', 'repos', 'connectors'])) {
-    throw new Error('selection must contain only slug, repos, and connectors');
+  if (!isRecord(selection) || !exactKeys(selection, ['slug', 'repos', 'connectors', 'skills'])) {
+    throw new Error('selection must contain only slug, repos, connectors, and skills');
   }
   if (typeof selection.slug !== 'string' || !SLUG_PATTERN.test(selection.slug)) {
     throw new Error('slug must match [A-Za-z0-9._-]+');
@@ -173,7 +185,22 @@ async function validateSelection(selection, scan) {
     connectors.push(connector);
   }
 
-  return { slug: selection.slug, repos, connectors };
+  if (!Array.isArray(selection.skills) || selection.skills.length > 100) {
+    throw new Error('skills must be an array with at most 100 folder names');
+  }
+  const scanSkills = new Map(scan.skills.map((skill) => [skill.folder, skill]));
+  const skills = [];
+  const selectedSkillKeys = new Set();
+  for (const folder of selection.skills) {
+    if (!validSkillFolder(folder)) throw new Error('skill folder names must be safe local folder names');
+    const key = folder.toLowerCase();
+    if (selectedSkillKeys.has(key)) throw new Error('skill selections must be unique ignoring case');
+    if (!scanSkills.has(folder)) throw new Error(`skill was not found in the scan: ${folder}`);
+    selectedSkillKeys.add(key);
+    skills.push(folder);
+  }
+
+  return { slug: selection.slug, repos, connectors, skills };
 }
 
 async function writeAtomically(path, value) {
@@ -199,6 +226,14 @@ function validScanRepo(repo) {
     && Array.isArray(repo.env_var_names);
 }
 
+function validScanSkill(skill) {
+  return isRecord(skill)
+    && validSkillFolder(skill.folder)
+    && typeof skill.name === 'string'
+    && skill.name.length > 0
+    && typeof skill.description === 'string';
+}
+
 const { scanPath, outPath } = parseArgs(process.argv.slice(2));
 const wizardPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'wizard.html');
 let scanText;
@@ -216,11 +251,15 @@ try {
   ]);
   scan = JSON.parse(scanText);
   if (!isRecord(scan) || scan.schema_version !== 1 || !Array.isArray(scan.repos)
-    || !scan.repos.every(validScanRepo)) {
+    || !scan.repos.every(validScanRepo) || !Array.isArray(scan.skills)
+    || !scan.skills.every(validScanSkill)) {
     throw new Error('scan file does not match the expected schema');
   }
   if (new Set(scan.repos.map((repo) => repo.id)).size !== scan.repos.length) {
     throw new Error('scan file contains duplicate repository ids');
+  }
+  if (new Set(scan.skills.map((skill) => skill.folder.toLowerCase())).size !== scan.skills.length) {
+    throw new Error('scan file contains duplicate skill folders');
   }
 } catch (error) {
   fail(error.message);

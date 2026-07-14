@@ -38,8 +38,8 @@
       color: #f2f2f2;
     }
     .repo-search { width: 100%; padding: 9px 10px; margin-bottom: 11px; }
-    .repo-list, .connector-list { border-top: 1px solid #303030; }
-    .repo-row, .connector-row {
+    .repo-list, .connector-list, .skill-list { border-top: 1px solid #303030; }
+    .repo-row, .connector-row, .skill-row {
       display: flex;
       align-items: flex-start;
       gap: 10px;
@@ -49,12 +49,12 @@
     }
     .repo-row { background: transparent; }
     .repo-row:not(.unavailable):hover, .repo-row:not(.unavailable):focus-visible,
-    .connector-row:hover { background: #1a1a1a; }
+    .connector-row:hover, .skill-row:hover { background: #1a1a1a; }
     .repo-row:focus-visible { outline: 2px solid #86a8ff; outline-offset: -2px; }
     .repo-row.unavailable { opacity: .54; }
     input[type="checkbox"] { margin: 2px 0 0; accent-color: #86a8ff; }
-    .repo-copy, .connector-copy { min-width: 0; flex: 1; }
-    .repo-name, .connector-name { display: block; font-weight: 650; overflow-wrap: anywhere; }
+    .repo-copy, .connector-copy, .skill-copy { min-width: 0; flex: 1; }
+    .repo-name, .connector-name, .skill-name { display: block; font-weight: 650; overflow-wrap: anywhere; }
     .repo-meta, .repo-detail { display: block; margin-top: 2px; }
     .repo-detail { color: #858585; }
     .repo-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -80,8 +80,9 @@
       background: #191919;
       color: #c8c8c8;
     }
-    .connector-row { cursor: pointer; }
-    .connector-copy .description { display: block; margin-top: 2px; }
+    .connector-row, .skill-row { cursor: pointer; }
+    .connector-copy .description, .skill-copy .description { display: block; margin-top: 2px; }
+    .skill-list { margin-bottom: 24px; }
     .custom-label { display: block; margin-top: 18px; font-size: 13px; font-weight: 650; }
     .custom-connector { width: 100%; margin-top: 7px; padding: 9px 10px; cursor: text; }
     .footer {
@@ -133,7 +134,10 @@
       <button id="show-more" class="show-more" type="button" hidden>Show more</button>
     </main>
     <aside>
-      <h2>2. Claude.ai connectors</h2>
+      <h2>2. Skills to include</h2>
+      <p class="intro">Optionally carry local Claude Code skills into this context repository. Nothing is selected by default.</p>
+      <div id="skills" class="skill-list"></div>
+      <h2>3. Claude.ai connectors</h2>
       <p class="intro">Declare the account connectors you already use so the company context can tell Claude when to reach for them.</p>
       <p class="note">This wizard cannot inspect your Claude.ai account. These are declarations only; no connector data or credentials are scanned.</p>
       <div id="connectors" class="connector-list"></div>
@@ -143,7 +147,7 @@
     </aside>
   </div>
   <form id="footer" class="footer">
-    <div id="summary" class="summary">0 repos · 1 connector</div>
+    <div id="summary" class="summary">0 repos · 0 skills · 1 connector</div>
     <label class="slug-field">Context repo <input id="slug" name="slug" type="text" value="company-context" pattern="[A-Za-z0-9._-]+" required></label>
     <button id="submit" class="submit" type="submit" disabled>Create plan</button>
     <p id="error" class="error" role="alert" hidden></p>
@@ -160,10 +164,12 @@
 
     const state = {
       repos: [],
+      skills: [],
       query: '',
       showAll: false,
       selectedRepos: new Set(),
       branches: new Map(),
+      selectedSkills: new Set(),
       connectors: new Set(['GitHub']),
       submitting: false,
     };
@@ -172,6 +178,7 @@
       repos: document.querySelector('#repos'),
       repoSearch: document.querySelector('#repo-search'),
       showMore: document.querySelector('#show-more'),
+      skills: document.querySelector('#skills'),
       connectors: document.querySelector('#connectors'),
       customConnectors: document.querySelector('#custom-connectors'),
       summary: document.querySelector('#summary'),
@@ -398,6 +405,40 @@
       }
     }
 
+    function renderSkills() {
+      elements.skills.replaceChildren();
+      if (state.skills.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = 'No local skills with SKILL.md were found.';
+        elements.skills.append(empty);
+        return;
+      }
+      for (const skill of state.skills) {
+        const row = document.createElement('label');
+        row.className = 'skill-row';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = state.selectedSkills.has(skill.folder);
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) state.selectedSkills.add(skill.folder);
+          else state.selectedSkills.delete(skill.folder);
+          renderSummary();
+        });
+        const copy = document.createElement('span');
+        copy.className = 'skill-copy';
+        const name = document.createElement('span');
+        name.className = 'skill-name';
+        name.textContent = skill.name;
+        const detail = document.createElement('span');
+        detail.className = 'description';
+        detail.textContent = skill.description || 'No description provided.';
+        copy.append(name, detail);
+        row.append(checkbox, copy);
+        elements.skills.append(row);
+      }
+    }
+
     function customConnectors() {
       return elements.customConnectors.value
         .split(',')
@@ -425,10 +466,17 @@
       return state.repos.filter((repo) => state.selectedRepos.has(repo.id));
     }
 
+    function selectedSkills() {
+      return state.skills
+        .filter((skill) => state.selectedSkills.has(skill.folder))
+        .map((skill) => skill.folder);
+    }
+
     function renderSummary() {
       const repos = selectedRepos();
+      const skills = selectedSkills();
       const connectors = allConnectors();
-      elements.summary.textContent = `${repos.length} ${repos.length === 1 ? 'repo' : 'repos'} · ${connectors.length} ${connectors.length === 1 ? 'connector' : 'connectors'}`;
+      elements.summary.textContent = `${repos.length} ${repos.length === 1 ? 'repo' : 'repos'} · ${skills.length} ${skills.length === 1 ? 'skill' : 'skills'} · ${connectors.length} ${connectors.length === 1 ? 'connector' : 'connectors'}`;
       const branchesValid = repos.every((repo) => validBranch(state.branches.get(repo.id)));
       const connectorsValid = connectors.length <= 25 && connectors.every(validConnector);
       const canSubmit = repos.length > 0 && branchesValid && connectorsValid
@@ -465,6 +513,7 @@
         slug: elements.slug.value,
         repos: repos.map((repo) => ({ id: repo.id, branch: state.branches.get(repo.id) })),
         connectors,
+        skills: selectedSkills(),
       };
       try {
         const response = await fetch('/submit', {
@@ -490,10 +539,12 @@
       })
       .then((scan) => {
         state.repos = scan.repos;
+        state.skills = scan.skills;
         for (const repo of state.repos) {
           state.branches.set(repo.id, repo.branch_current || repo.branch_default || repo.branches_recent[0] || '');
         }
         renderRepos();
+        renderSkills();
         renderConnectors();
         renderSummary();
       })

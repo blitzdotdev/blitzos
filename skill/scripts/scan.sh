@@ -84,6 +84,75 @@ file_size_bytes() {
   fi
 }
 
+frontmatter_field() {
+  local file=$1 field=$2
+  LC_ALL=C awk -v wanted="$field" '
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+    function emit(value, first, last) {
+      value = trim(value)
+      first = substr(value, 1, 1)
+      last = substr(value, length(value), 1)
+      if (length(value) >= 2 && ((first == "\"" && last == "\"") || (first == "\047" && last == "\047"))) {
+        value = substr(value, 2, length(value) - 2)
+      }
+      gsub(/[[:space:]]+/, " ", value)
+      printf "%s", value
+      emitted = 1
+    }
+    NR == 1 {
+      sub(/\r$/, "")
+      if ($0 != "---") exit
+      frontmatter = 1
+      next
+    }
+    frontmatter {
+      line = $0
+      sub(/\r$/, "", line)
+      if (capture) {
+        if (line ~ /^[[:space:]]+/) {
+          line = trim(line)
+          if (line != "") value = value (value == "" ? "" : " ") line
+          next
+        }
+        emit(value)
+        exit
+      }
+      if (line ~ /^[[:space:]]*---[[:space:]]*$/) exit
+      pattern = "^[[:space:]]*" wanted "[[:space:]]*:"
+      if (match(line, pattern)) {
+        value = trim(substr(line, RSTART + RLENGTH))
+        if (value ~ /^[>|][+-]?[0-9]*$/) {
+          value = ""
+          capture = 1
+          next
+        }
+        emit(value)
+        exit
+      }
+    }
+    END {
+      if (capture && !emitted) emit(value)
+    }
+  ' "$file"
+}
+
+valid_skill_folder() {
+  jq -en --arg value "$1" '
+    $value
+    | length > 0
+      and length <= 255
+      and . != "."
+      and . != ".."
+      and (ascii_downcase != "readme.md")
+      and (ascii_downcase != ".git")
+      and test("^[^/\u0000-\u001F\u007F]+$")
+  ' >/dev/null
+}
+
 sanitize_origin() {
   local origin=$1 scheme after_scheme
   case "$origin" in
@@ -309,8 +378,32 @@ else
   fi
 fi
 
+skills_root="$HOME/.claude/skills"
+local_skills="$tmp_dir/local-skills.jsonl"
+: > "$local_skills"
+if [ -d "$skills_root" ]; then
+  while IFS= read -r -d '' skill_dir; do
+    [ ! -L "$skill_dir" ] || continue
+    skill_file="$skill_dir/SKILL.md"
+    [ -f "$skill_file" ] && [ ! -L "$skill_file" ] || continue
+    folder=${skill_dir##*/}
+    valid_skill_folder "$folder" || continue
+    skill_name=$(frontmatter_field "$skill_file" name)
+    [ -n "$skill_name" ] || skill_name=$folder
+    skill_description=$(frontmatter_field "$skill_file" description)
+    jq -cn \
+      --arg folder "$folder" \
+      --arg name "$skill_name" \
+      --arg description "$skill_description" \
+      '{folder: $folder, name: $name, description: $description}' >> "$local_skills"
+  done < <(find "$skills_root" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
+fi
+jq -s 'sort_by([(.name | ascii_downcase), (.folder | ascii_downcase)])' \
+  "$local_skills" > "$tmp_dir/local-skills.json"
+
 scanned_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 jq -s \
+  --slurpfile skills "$tmp_dir/local-skills.json" \
   --arg scanned_at "$scanned_at" '
   group_by(.id)
   | map(
@@ -339,6 +432,7 @@ jq -s \
         ($repos | map(select(.source == "local")) | sort_by([-(.session_count), .name]))
         + ($repos | map(select(.source == "github")) | sort_by(.updated_at) | reverse)
       ),
+      skills: $skills[0],
       scanned_at: $scanned_at
     }
 ' "$local_repos" "$github_repos" > "$tmp_dir/result.json"
@@ -346,7 +440,8 @@ jq -s \
 jq -r '
   ([.repos[] | select(.source == "local")] | length) as $local_count
   | ([.repos[] | select(.source == "github")] | length) as $github_count
-  | "blitzos scan: \(.repos | length) repositories after origin dedupe; \($local_count) local git roots; \($github_count) GitHub-only",
+  | (.skills | length) as $skill_count
+  | "blitzos scan: \(.repos | length) repositories after origin dedupe; \($local_count) local git roots; \($github_count) GitHub-only; \($skill_count) local skills available",
   (.repos
     | map(select(.source == "local"))
     | .[0:5][]

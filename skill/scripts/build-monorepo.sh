@@ -42,6 +42,14 @@ reject_secret_material() {
   esac
 }
 
+file_size_bytes() {
+  if stat -f '%z' "$1" >/dev/null 2>&1; then
+    stat -f '%z' "$1"
+  else
+    stat -c '%s' "$1"
+  fi
+}
+
 [ "$#" -eq 1 ] || {
   usage
   exit 2
@@ -69,6 +77,15 @@ if ! jq -e '
     and length > 0
     and length <= 80
     and test("^[A-Za-z0-9][A-Za-z0-9 ._+&()/-]*$");
+  def valid_skill:
+    type == "string"
+    and length > 0
+    and length <= 255
+    and . != "."
+    and . != ".."
+    and (ascii_downcase != "readme.md")
+    and (ascii_downcase != ".git")
+    and test("^[^/\u0000-\u001F\u007F]+$");
   def has_exact_heading($md; $heading):
     ($md | gsub("\r\n"; "\n") | split("\n") | index($heading)) != null;
   def github_name:
@@ -79,7 +96,7 @@ if ! jq -e '
     | sub("^git@github\\.com:"; "")
     | sub("\\.git$"; "");
   type == "object"
-  and ((keys - ["slug", "repos", "connectors", "company_claude_md"]) | length == 0)
+  and ((keys - ["slug", "repos", "connectors", "skills", "company_claude_md"]) | length == 0)
   and ((["slug", "repos", "connectors", "company_claude_md"] - keys) | length == 0)
   and (.slug | type == "string" and length > 0 and test("^[A-Za-z0-9._-]+$"))
   and (.repos | type == "array" and length > 0 and length <= 100)
@@ -93,6 +110,8 @@ if ! jq -e '
   and (([.repos[].name | split("/") | last | ascii_downcase] | unique | length) == (.repos | length))
   and (.connectors | type == "array" and length <= 25 and all(.[]; valid_connector))
   and (([.connectors[] | ascii_downcase] | unique | length) == (.connectors | length))
+  and ((has("skills") | not) or (.skills | type == "array" and length <= 100 and all(.[]; valid_skill)))
+  and ((has("skills") | not) or (([.skills[] | ascii_downcase] | unique | length) == (.skills | length)))
   and (.company_claude_md | type == "string" and length > 0 and length <= 100000 and (contains("\u0000") | not) and (gsub("\r\n"; "\n") | split("\n") | length <= 200))
   and (.company_claude_md as $md
     | has_exact_heading($md; "## Repositories")
@@ -174,6 +193,61 @@ while IFS=$'\t' read -r repo_name branch; do
   fi
   printf '%s\t%s\t%s\n' "$repo_name" "$branch" "$sha" >> "$resolved_repos"
 done < <(jq -r '.repos[] | [.name, .branch] | @tsv' "$plan_file")
+
+skills_staging="$tmp_dir/skills"
+mkdir -m 700 "$skills_staging"
+skills_readme="$skills_staging/README.md"
+cat > "$skills_readme" <<'EOF'
+# Skills
+
+Skills in this folder travel with the context repo: BlitzOS installs them into cloud sessions automatically.
+
+Add a skill as skills/<name>/SKILL.md (plus any supporting files). Import your local skills from the context repo page on blitzos.com, or let a cloud agent author new ones here.
+EOF
+chmod 600 "$skills_readme"
+
+while IFS= read -r skill_name; do
+  source_skill="$HOME/.claude/skills/$skill_name"
+  if [ ! -d "$source_skill" ] || [ -L "$source_skill" ]; then
+    fail "selected skill is not a local directory: $skill_name; no repository was created"
+  fi
+  if [ ! -f "$source_skill/SKILL.md" ] || [ -L "$source_skill/SKILL.md" ]; then
+    fail "selected skill is missing a regular SKILL.md: $skill_name; no repository was created"
+  fi
+
+  staged_skill="$skills_staging/$skill_name"
+  mkdir -p "$staged_skill"
+  skill_dirs_list="$tmp_dir/skill-dirs"
+  if ! find "$source_skill" -type d -print0 > "$skill_dirs_list" 2>/dev/null; then
+    fail "could not safely enumerate directories in skill $skill_name; no repository was created"
+  fi
+  while IFS= read -r -d '' source_dir; do
+    relative_dir=${source_dir#"$source_skill"/}
+    [ "$relative_dir" != "$source_dir" ] || continue
+    mkdir -p "$staged_skill/$relative_dir"
+  done < "$skill_dirs_list"
+
+  skill_bytes=0
+  skill_files_list="$tmp_dir/skill-files"
+  if ! find "$source_skill" -type f -print0 > "$skill_files_list" 2>/dev/null; then
+    fail "could not safely enumerate files in skill $skill_name; no repository was created"
+  fi
+  while IFS= read -r -d '' source_file; do
+    relative_file=${source_file#"$source_skill"/}
+    [ "$relative_file" != "$source_file" ] \
+      || fail "could not determine copied path for skill $skill_name; no repository was created"
+    mkdir -p "$(dirname -- "$staged_skill/$relative_file")"
+    cp -p "$source_file" "$staged_skill/$relative_file" \
+      || fail "could not copy skill file $skill_name/$relative_file; no repository was created"
+    copied_bytes=$(file_size_bytes "$staged_skill/$relative_file") \
+      || fail "could not measure copied skill file $skill_name/$relative_file; no repository was created"
+    skill_bytes=$((skill_bytes + copied_bytes))
+    if [ "$skill_bytes" -gt 2097152 ]; then
+      fail "skill file $skill_name/$relative_file makes the folder exceed the 2 MB limit; no repository was created"
+    fi
+    reject_secret_material "$staged_skill/$relative_file" "skill $skill_name/$relative_file"
+  done < "$skill_files_list"
+done < <(jq -r '.skills[]?' "$plan_file")
 
 company_claude_draft="$tmp_dir/company-CLAUDE.md"
 jq -r '.company_claude_md' "$plan_file" > "$company_claude_draft"
@@ -417,6 +491,11 @@ install -m 644 "$sessions_readme" "$target/sessions/README.md"
 install -m 644 /dev/null "$target/sessions/INDEX.md"
 mkdir -m 700 "$target/docs"
 install -m 644 "$cloud_setup" "$target/docs/CLOUD-SETUP.md"
+mkdir -m 700 "$target/skills"
+install -m 644 "$skills_readme" "$target/skills/README.md"
+while IFS= read -r skill_name; do
+  cp -Rp "$skills_staging/$skill_name" "$target/skills/$skill_name"
+done < <(jq -r '.skills[]?' "$plan_file")
 
 : > "$target/.gitmodules"
 while IFS=$'\t' read -r repo_name branch sha; do
@@ -431,7 +510,7 @@ chmod 644 "$target/.gitmodules"
 
 unexpected=$(find "$target" -mindepth 1 -maxdepth 1 \
   ! -name .git ! -name .gitmodules ! -name README.md ! -name CLAUDE.md ! -name bootstrap.sh \
-  ! -name docs ! -name sessions -print -quit)
+  ! -name docs ! -name sessions ! -name skills -print -quit)
 [ -z "$unexpected" ] || fail 'unexpected output was generated; refusing to commit'
 unexpected_session=$(find "$target/sessions" -mindepth 1 -maxdepth 1 \
   ! -name README.md ! -name INDEX.md -print -quit)
@@ -440,6 +519,8 @@ unexpected_session=$(find "$target/sessions" -mindepth 1 -maxdepth 1 \
 unexpected_docs=$(find "$target/docs" -mindepth 1 -maxdepth 1 \
   ! -name CLOUD-SETUP.md -print -quit)
 [ -z "$unexpected_docs" ] || fail 'unexpected cloud setup output was generated; refusing to commit'
+unexpected_skill_link=$(find "$target/skills" -type l -print -quit)
+[ -z "$unexpected_skill_link" ] || fail 'a symlink reached the generated skills directory; refusing to commit'
 [ -x "$target/bootstrap.sh" ] || fail 'bootstrap.sh must be executable'
 
 while IFS= read -r generated_file; do
@@ -448,7 +529,7 @@ while IFS= read -r generated_file; do
 done < <(find "$target" -path "$target/.git" -prune -o -type f -print | LC_ALL=C sort)
 
 git -C "$target" add -- .gitmodules README.md CLAUDE.md bootstrap.sh docs/CLOUD-SETUP.md \
-  sessions/README.md sessions/INDEX.md
+  sessions/README.md sessions/INDEX.md skills
 if ! git -c user.name=blitzos \
   -c user.email=blitzos@users.noreply.github.com \
   -C "$target" commit -m 'Add company context monorepo for Claude' >/dev/null 2>&1; then

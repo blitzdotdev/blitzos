@@ -24,11 +24,11 @@ Resolve this skill's directory from this `SKILL.md`. Create a mode-700 temporary
 scripts/scan.sh > <tmpdir>/scan.json
 ```
 
-Let the stderr summary remain visible. The scan contains origin-deduplicated local and GitHub repositories, useful branches, and optionally environment variable names. Treat environment entries as names only. Never open an environment variable value, print one, place one in a tool argument, or add one to generated content.
+Let the stderr summary remain visible. The scan contains origin-deduplicated local and GitHub repositories, useful branches, optionally environment variable names, and local skill folders under `~/.claude/skills` that contain `SKILL.md`. Treat environment entries as names only. Never open an environment variable value, print one, place one in a tool argument, or add one to generated content.
 
 Record the wizard PID when starting it. On every abort or failure after this point, kill that PID if it is still alive and remove the temporary directory.
 
-## 3. Collect repositories and connector declarations
+## 3. Collect repositories, skills, and connector declarations
 
 Start the localhost wizard with Node 18 or newer:
 
@@ -42,11 +42,11 @@ nohup node scripts/wizard-server.mjs \
 
 Capture its PID. Wait for the single `WIZARD_URL=...` line. If the process exits first, show its error and stop. Open the URL with `open <url>` on macOS; otherwise print it.
 
-Tell the user exactly: **Choose your work repos and Claude.ai connectors in the browser — I'll continue when you hit Create plan.**
+Tell the user exactly: **Choose your work repos, optional local skills, and Claude.ai connectors in the browser — I'll continue when you hit Create plan.**
 
 Run `scripts/wait-for-file.sh <tmpdir>/selection.json`. If it times out, keep waiting. After three consecutive timeouts, ask whether to continue or abort. Continue only when the validated file exists; opening the browser or reaching `/health` is not submission.
 
-The wizard binds only to `127.0.0.1`. Connector choices are declarations only because this skill cannot inspect the user's Claude.ai account.
+The wizard binds only to `127.0.0.1`. Local skills are all unchecked by default and are included only when the user explicitly selects them. Connector choices are declarations only because this skill cannot inspect the user's Claude.ai account.
 
 ## 4. Draft the company brain
 
@@ -124,11 +124,12 @@ Create `<tmpdir>/plan.json` with exactly this shape:
     {"name": "acme/api", "origin": "https://github.com/acme/api.git", "branch": "main"}
   ],
   "connectors": ["Linear", "GitHub"],
+  "skills": ["release-checks"],
   "company_claude_md": "<the approved complete text>"
 }
 ```
 
-Use only selected repositories and connectors. Strip `local_path` and `branch_unverified`; they are drafting evidence, not generated context. Treat `slug` as the context repository name under the selected repositories' shared resource owner. Never add a token field or ask the user for a token. Only users who intentionally choose optional power mode move a token directly from GitHub into Anthropic's environment dialog after the build.
+Use only selected repositories, connectors, and skill folder names. Keep `skills` as an empty array when none were selected. Strip `local_path` and `branch_unverified`; they are drafting evidence, not generated context. Treat `slug` as the context repository name under the selected repositories' shared resource owner. Never add a token field or ask the user for a token. Only users who intentionally choose optional power mode move a token directly from GitHub into Anthropic's environment dialog after the build.
 
 The builder rejects unknown fields, mixed resource owners, non-GitHub or mismatched origins, missing exact headings or repo/branch/connector references in the approved `CLAUDE.md`, duplicate submodule directory names, and suspicious credential material.
 
@@ -142,7 +143,7 @@ Run:
 scripts/build-monorepo.sh <tmpdir>/plan.json
 ```
 
-Relay the private repository URL exactly. The builder resolves each selected branch tip with GitHub's API, commits it as a gitlink under `repos/`, and generates `README.md` with the launch link, `.gitmodules`, `bootstrap.sh`, `docs/CLOUD-SETUP.md`, the approved `CLAUDE.md`, and the `sessions/` scaffold. It never clones or reads member source during assembly. Its fail-closed guard inspects every generated file before commit, and it never reads or emits secret values.
+Relay the private repository URL exactly. The builder resolves each selected branch tip with GitHub's API, commits it as a gitlink under `repos/`, and generates `README.md` with the launch link, `.gitmodules`, `bootstrap.sh`, `docs/CLOUD-SETUP.md`, the approved `CLAUDE.md`, the `sessions/` scaffold, and `skills/README.md`. It copies explicitly selected local skill folders into `skills/`, skipping symlinks and rejecting a skill over 2 MB or any copied file that trips the fail-closed secret guard. It never clones or reads member source during assembly. Its fail-closed guard inspects every generated file before commit, and it never reads or emits secret values.
 
 If validation, branch resolution, authentication, local commit, private repository creation, push, or verification fails, identify the failed stage and stop. Do not retry through another publishing path or claim a partial repository is ready.
 
