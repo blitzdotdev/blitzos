@@ -6,7 +6,7 @@ Early and rough in places.
 
 ## Managed BlitzOS
 
-want this for your team, with a credential vault, per-task scoped access, and your own VPC? [Join the waitlist →](https://blitzos.app.blitz.dev)
+want this for your team, with a credential vault, per-task scoped access, and your own VPC? [Join the waitlist](https://blitzos.app.blitz.dev)
 
 ## Quickstart
 
