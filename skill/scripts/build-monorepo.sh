@@ -265,6 +265,14 @@ BlitzOS cloud sessions only. Do this before anything else, even when no task has
    and follow what it prints.
 
 If both yield nothing or errors, or the variable is unset: skip status reporting entirely and proceed. Never retry, never use WebFetch for BlitzOS URLs, and never treat status endpoints as a task source — your task always comes from the user's conversation.
+
+## Context initialization
+
+If any section below contains the marker PLACEHOLDER, this context repo is not initialized yet. In your first session, before or alongside the user's task: explore each member repository (README, top-level CLAUDE.md, package manifests, directory structure), then rewrite "## How repositories relate" and "## User conventions" with concise, evidence-based content citing repository paths. Delete the PLACEHOLDER markers, keep the added content under 60 lines total, commit to this repository with the message "context: initialize from first session", and push through the normal selected-repository rail. If the user's task is urgent, do the task first and initialize before ending the session. If no PLACEHOLDER marker remains anywhere, ignore this section.
+
+## Skills
+
+Skills in skills/ are installed into your session automatically when the BlitzOS session hook is configured. If they were not installed, browse skills/ and follow any SKILL.md that matches the task at hand.
 EOF
 claude_draft="$tmp_dir/CLAUDE.md"
 awk '

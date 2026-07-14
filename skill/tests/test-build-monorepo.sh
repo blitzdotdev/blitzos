@@ -99,7 +99,7 @@ company_md=$(cat <<'EOF'
 
 ## How repositories relate
 
-Their relationship is unknown in this fixture.
+> PLACEHOLDER: The relationships between these repositories have not been documented yet. Inspect repository evidence before assuming how they fit together.
 
 ## User conventions
 
@@ -311,6 +311,8 @@ check 'bootstrap prints the final status table' \
   grep -Eq 'REPOSITORY[[:space:]]+BRANCH[[:space:]]+HEAD[[:space:]]+STATE' "$runtime_output"
 
 for heading in \
+  '## Context initialization' \
+  '## Skills' \
   '## Repositories' \
   '## How repositories relate' \
   '## User conventions' \
@@ -329,6 +331,8 @@ check 'CLAUDE.md power mode requires the token-backed bootstrap' \
   sh "$target/CLAUDE.md"
 check 'CLAUDE.md places Session status as the first H2 section' \
   test "$(awk '/^## / { print; exit }' "$target/CLAUDE.md")" = '## Session status'
+check 'CLAUDE.md places Context initialization and Skills immediately after Session status' \
+  test "$(awk '/^## / { headings[++count] = $0 } END { print headings[1] "|" headings[2] "|" headings[3] }' "$target/CLAUDE.md")" = '## Session status|## Context initialization|## Skills'
 expected_status="$tmp_dir/expected-session-status.md"
 cat > "$expected_status" <<'EOF'
 ## Session status
@@ -356,6 +360,44 @@ awk '
 ' "$target/CLAUDE.md" > "$actual_status"
 check 'CLAUDE.md contains the exact file-first Session status section' \
   cmp -s "$expected_status" "$actual_status"
+expected_context_initialization="$tmp_dir/expected-context-initialization.md"
+cat > "$expected_context_initialization" <<'EOF'
+## Context initialization
+
+If any section below contains the marker PLACEHOLDER, this context repo is not initialized yet. In your first session, before or alongside the user's task: explore each member repository (README, top-level CLAUDE.md, package manifests, directory structure), then rewrite "## How repositories relate" and "## User conventions" with concise, evidence-based content citing repository paths. Delete the PLACEHOLDER markers, keep the added content under 60 lines total, commit to this repository with the message "context: initialize from first session", and push through the normal selected-repository rail. If the user's task is urgent, do the task first and initialize before ending the session. If no PLACEHOLDER marker remains anywhere, ignore this section.
+EOF
+actual_context_initialization="$tmp_dir/actual-context-initialization.md"
+awk '
+  $0 == "## Context initialization" { capture = 1 }
+  capture && seen && /^## / { exit }
+  capture { lines[++count] = $0; seen = 1 }
+  END {
+    while (count && lines[count] == "") count--
+    for (i = 1; i <= count; i++) print lines[i]
+  }
+' "$target/CLAUDE.md" > "$actual_context_initialization"
+check 'CLAUDE.md contains the exact Context initialization section' \
+  cmp -s "$expected_context_initialization" "$actual_context_initialization"
+expected_claude_skills="$tmp_dir/expected-CLAUDE-skills.md"
+cat > "$expected_claude_skills" <<'EOF'
+## Skills
+
+Skills in skills/ are installed into your session automatically when the BlitzOS session hook is configured. If they were not installed, browse skills/ and follow any SKILL.md that matches the task at hand.
+EOF
+actual_claude_skills="$tmp_dir/actual-CLAUDE-skills.md"
+awk '
+  $0 == "## Skills" { capture = 1 }
+  capture && seen && /^## / { exit }
+  capture { lines[++count] = $0; seen = 1 }
+  END {
+    while (count && lines[count] == "") count--
+    for (i = 1; i <= count; i++) print lines[i]
+  }
+' "$target/CLAUDE.md" > "$actual_claude_skills"
+check 'CLAUDE.md contains the exact Skills section' \
+  cmp -s "$expected_claude_skills" "$actual_claude_skills"
+check 'CLAUDE.md preserves the How repositories relate PLACEHOLDER marker' \
+  grep -Fxq '> PLACEHOLDER: The relationships between these repositories have not been documented yet. Inspect repository evidence before assuming how they fit together.' "$target/CLAUDE.md"
 
 test_home="$tmp_dir/test-home"
 mkdir -p "$test_home/.claude/skills/release-checks/support"
