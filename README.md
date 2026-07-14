@@ -31,6 +31,13 @@ The default **Trusted** network is enough — git and connectors use separate pr
 
 Claude-only (Codex coming). The free tier has no managed credentials, deploy, or per-task scoping — that's [Managed BlitzOS](https://blitzos.app.blitz.dev). Pushing the session log back from cloud is experimental.
 
+## Troubleshooting
+
+**Claude can "add" files from my repo but 404s when I ask it to read the repo — even with full access.**
+You're likely using the **GitHub connector in regular Claude chat**, which only attaches individual files. To have Claude actually read and work *across* a repo, use **Claude Code on the web** — [claude.ai/code](https://claude.ai/code): connect GitHub there, then **select the repo when you start a session**. The session clones the whole repo into its environment and reads files natively — no 404. The chat connector and the coding session are different surfaces; this skill targets the coding session.
+
+Still 404ing in claude.ai/code? Make sure the **Claude GitHub App is authorized on that specific repo** (GitHub → Settings → Applications → Claude). Org-owned and private repos often need to be granted individually, even if your account already has "full access."
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
