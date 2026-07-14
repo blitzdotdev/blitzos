@@ -27,7 +27,7 @@ your-context-repo/
 
 Launching becomes one link: the VM boots with the context repo plus every work repo selected, reads the map, reads what previous cloud agents did, and starts warm. Your laptop can be off the entire time.
 
-**Managed BlitzOS:** the version where agents get your whole company — the same tools your team uses, scoped per task, in our cloud or your VPC. [Join the waitlist →](https://blitzos.com/waitlist)
+**Managed BlitzOS:** Context repository, but for your whole company. Give cloud agents a role and launch them with scoped context, your team's tools (Google Workspace, Slack, Linear, Stripe, etc), and credentials. Agents become as capable as your coworkers. [Join the waitlist →](https://blitzos.com/waitlist)
 
 Early and rough in places.
 
@@ -90,11 +90,12 @@ Next:
 - [ ] **Self-updating context** — cloud agents propose PRs back to the context repo when they learn something (a new convention, a decision, a map change), so context compounds instead of rotting
 - [ ] **Codex support** — the same context repo boots OpenAI Codex cloud agents; your context stops being vendor-locked
 
-**Managed BlitzOS** — where the context repo grows into your **company repo** ([waitlist](https://blitzos.com/waitlist)):
+**Managed BlitzOS** — agents as capable as your coworkers, scoped and audited ([waitlist](https://blitzos.com/waitlist)):
 
-- [ ] **The company repo** — code, plans, research, and docs in one repo, with goals agents actually read. Every function gets context — engineering, finance, marketing, ops — not just code.
-- [ ] **Real tools, full loops** — cloud agents get the same tools a person in that role would have: email, Slack, Linear, analytics, Stripe. Read the ticket, check the code, ship the fix, reply to the customer, close the ticket — one cloud agent.
-- [ ] **Key-card per agent** — each cloud agent is a fork of your company containing only the repos, connections, and secrets its job needs. Everything it touches is audit-logged.
+- [ ] **Roles, not setups** — give a cloud agent a role and launch: it gets the company repo (code, plans, research, docs, goals), your team's tools — Google Workspace, Slack, Linear, analytics, Stripe — and the credentials that role needs.
+- [ ] **Whole loops, not just code** — read the support ticket, check the code, ship the fix, reply to the customer, close the ticket — one cloud agent, start to finish.
+- [ ] **Policy layer over capability and credentials** — every grant is per role and per agent, never account-wide; each cloud agent is a fork of your company holding only what its job needs.
+- [ ] **Audit trail end to end** — everything every agent touched, when, and with which credential.
 - [ ] **Runs where you need it** — our managed cloud or your own VPC.
 
 ## Troubleshooting
