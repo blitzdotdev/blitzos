@@ -7,8 +7,6 @@
   [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 </div>
 
-<br />
-
 ## What is this?
 
 Your Claude subscription includes free cloud computers. Every cloud agent you start at [claude.ai/code](https://claude.ai/code) gets a fresh VM that keeps working after you close your laptop.
