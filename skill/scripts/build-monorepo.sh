@@ -123,6 +123,7 @@ if ! jq -e '
     and ($md | contains("sessions/INDEX.md"))
     and ($md | contains("sessions/<YYYY-MM-DD>-<short-task-slug>.md"))
     and ($md | contains("## What changed"))
+    and ($md | contains("## Verification"))
     and ($md | contains("## Key decisions"))
     and ($md | contains("## For next session"))
     and ($md | contains("### Session mode"))
@@ -298,7 +299,10 @@ Use this template:
 <concise task description>
 
 ## What changed
-<PRs, commits, and files touched>
+<PRs, commits, files touched, and concise diff summary>
+
+## Verification
+<commands run and their pass, fail, or skipped status>
 
 ## Key decisions
 <decisions that constrain later work>
