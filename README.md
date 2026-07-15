@@ -35,6 +35,8 @@ Launching a cloud agent that can do real work becomes one click: the VM boots wi
 
 **Local (most private):** this skill builds everything on your machine and grants nothing to BlitzOS servers.
 
+**Self-host (yours end to end):** run the same portal on your own Cloudflare account — your OAuth app, your database, your domain. One script, about 10 minutes: [portal/SELF-HOSTING.md](portal/SELF-HOSTING.md).
+
 Needs Claude Code, Git, `gh` (authenticated), `jq`, and Node 18+.
 
 ```sh

@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "blitzos-portal-selfhost",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-30",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "invocation_logs": false,
+      "head_sampling_rate": 1
+    }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LAUNCH_CHANNELS",
+        "class_name": "LaunchChannel"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "LaunchChannel"
+      ]
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "PRIMARY_DB",
+      "database_name": "blitzos-selfhost-db",
+      "database_id": "__DATABASE_ID__",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "GITHUB_CLIENT_ID": "__GITHUB_CLIENT_ID__",
+    "ALLOWED_LOGINS": ""
+  }
+}

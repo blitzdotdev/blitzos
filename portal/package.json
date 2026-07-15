@@ -1,0 +1,11 @@
+{
+  "name": "blitzos-portal-selfhost",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply blitzos-selfhost-db --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
