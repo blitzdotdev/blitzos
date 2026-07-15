@@ -90,7 +90,10 @@ At the end of meaningful work:
    <concise task description>
 
    ## What changed
-   <subrepository PR URLs, commits, and files touched>
+   <subrepository PR URLs, commits, files touched, and concise diff summary>
+
+   ## Verification
+   <commands run and their pass, fail, or skipped status>
 
    ## Key decisions
    <decisions that constrain later work>

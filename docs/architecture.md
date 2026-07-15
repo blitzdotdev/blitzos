@@ -22,7 +22,7 @@ After the user approves the complete company brain, `build-monorepo.sh` creates 
 
 The builder rejects unknown plan fields and common credential material before committing. It creates and pushes the GitHub repository with `gh repo create --private`, then verifies that GitHub reports it as private. It never clones work repositories, copies source, creates bundles, or reads environment files.
 
-At session start, Claude reads the index and recent relevant records. After meaningful work, it creates one dated task record, appends one index entry, and commits and pushes both to the context repository. This push-back requires the context repository to be selected and depends on unverified GitHub proxy push support.
+At session start, Claude reads the index and recent relevant records. After meaningful work, it creates one dated task record with a concise diff summary and the exact verification commands plus their pass, fail, or skipped status, appends one index entry, and commits and pushes both to the context repository. This push-back requires the context repository to be selected and depends on unverified GitHub proxy push support.
 
 ## Session launch
 

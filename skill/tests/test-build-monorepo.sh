@@ -121,7 +121,7 @@ Follow the default-branch write-back and fallback instructions below for context
 
 ## Session log (warm start)
 
-Detect the session mode, then read `sessions/INDEX.md`. Write `sessions/<YYYY-MM-DD>-<short-task-slug>.md` with `## What changed`, `## Key decisions`, and `## For next session`, cross-link the PR URLs, then update the index. Once on the default branch, stage gitlinks only in POWER MODE.
+Detect the session mode, then read `sessions/INDEX.md`. Write `sessions/<YYYY-MM-DD>-<short-task-slug>.md` with `## What changed`, `## Verification`, `## Key decisions`, and `## For next session`, cross-link the PR URLs, then update the index. Once on the default branch, stage gitlinks only in POWER MODE.
 
 Session records belong on the default branch, not your task branch. In the context repo: run `git checkout main && git pull --ff-only`, commit the session record and index update there, and push with `git push origin main`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it.
 EOF
@@ -330,6 +330,9 @@ check 'CLAUDE.md default mode uses native sibling checkouts' \
   sh "$target/CLAUDE.md"
 check 'generated guidance covers power mode and the default-branch session write-back' \
   sh -c 'grep -Fq "POWER MODE" "$1" && grep -Fq "requires \`BLITZOS_GIT_TOKEN\`" "$1" && grep -Fq "stage changed gitlinks" "$1" && grep -Fqx "Session records belong on the default branch, not your task branch. In the context repo: run \`git checkout main && git pull --ff-only\`, commit the session record and index update there, and push with \`git push origin main\`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it." "$1" && grep -Fqx "Session records belong on the default branch, not your task branch. In the context repo: run \`git checkout main && git pull --ff-only\`, commit the session record and index update there, and push with \`git push origin main\`. If the repository rail rejects the push to main, push your working branch instead and end your final message with: session log is on <branch> — merge it to main so future sessions see it." "$2"' \
+  sh "$target/CLAUDE.md" "$target/sessions/README.md"
+check 'generated session guidance records changes and verification evidence' \
+  sh -c 'grep -Fq "## Verification" "$1" && grep -Fq "## Verification" "$2" && grep -Fq "commands run and their pass, fail, or skipped status" "$2"' \
   sh "$target/CLAUDE.md" "$target/sessions/README.md"
 check 'CLAUDE.md places Session status as the first H2 section' \
   test "$(awk '/^## / { print; exit }' "$target/CLAUDE.md")" = '## Session status'
